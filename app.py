@@ -40,9 +40,9 @@ def callback():
     # Check if user already exists in DB
     existing = User.query.filter_by(spotify_id=user_data['id']).first()
     if existing:
-        return redirect('/')
+        return redirect(url_for('home'))
     else:
-        return redirect('/register')
+        return redirect(url_for('register'))
     
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -64,7 +64,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        return redirect('/')
+        return redirect(url_for('home'))
     
     return render_template('register.html')
 
