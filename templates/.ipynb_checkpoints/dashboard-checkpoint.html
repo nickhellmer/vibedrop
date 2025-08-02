@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VibeDrop Dashboard</title>
+</head>
+<body>
+    <h1>🎧 Welcome, {{ username }}!</h1>
+    <p>Your Drop Cred: <strong>{{ drop_cred }}</strong></p>
+
+    <form action="{{ url_for('create_circle') }}">
+        <button type="submit">➕ Create Sound Circle</button>
+    </form>
+</body>
+</html>

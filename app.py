@@ -40,7 +40,7 @@ def callback():
     # Check if user already exists in DB
     existing = User.query.filter_by(spotify_id=user_data['id']).first()
     if existing:
-        return redirect(url_for('home'))
+        return redirect(url_for('dashboard'))
     else:
         return redirect(url_for('register'))
     
@@ -64,9 +64,23 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        return redirect(url_for('home'))
+        return redirect(url_for('dashboard'))
     
     return render_template('register.html')
+
+@app.route('/dashboard')
+def dashboard():
+    user_data = session.get('user')
+    if not user_data:
+        return redirect(url_for('home'))
+
+    user = User.query.filter_by(spotify_id=user_data['id']).first()
+    if not user:
+        return redirect(url_for('register'))
+
+    return render_template('dashboard.html',
+                           username=user.vibedrop_username,
+                           drop_cred=5.0)  # Hardcoded for now
 
 if __name__ == "__main__":
     with app.app_context():
