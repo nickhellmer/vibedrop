@@ -123,6 +123,8 @@ def callback():
         return "❌ Error getting Spotify access token.", 400
 
     user_data = get_user_profile(access_token)
+    if user_data is None:
+        return "❌ Failed to fetch Spotify profile. Please try logging in again.", 400
 
     session['user'] = {
         'id': user_data['id'],

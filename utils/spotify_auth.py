@@ -52,6 +52,14 @@ def get_token(code):
 def get_user_profile(access_token):
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(SPOTIFY_USER_PROFILE_URL, headers=headers)
+    
+    # NEW: handle failure gracefully
+    if response.status_code != 200:
+        print("Spotify /me request failed:")
+        print("Status Code:", response.status_code)
+        print("Response Text:", response.text)
+        return None
+    
     return response.json()
 
 def refresh_token_if_needed(session_user):
