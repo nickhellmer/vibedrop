@@ -1,14 +1,157 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>VibeDrop Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+            margin: 0;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #7B4EFF;
+        }
+
+        p {
+            font-size: 1.2rem;
+            color: #CCCCCC;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: #FFFFFF;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 30px;
+        }
+
+        li {
+            margin: 10px 0;
+        }
+
+        a {
+            color: #BB86FC;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: #7B4EFF;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        button:hover {
+            background-color: #693BDA;
+        }
+
+        form {
+            margin-top: 30px;
+        }
+        
+        .monogram {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+        }
+
+        .monogram span {
+            font-size: 40px;
+            position: absolute;
+            line-height: 1;
+            -webkit-text-stroke: 1.5px #7B4EFF;
+            color: #FFFFFF;
+        }
+
+        .monogram .v-left {
+            top: -9px;
+            left: 4px;
+            z-index: 2;
+            clip-path: inset(0 12px 0 0);
+        }
+
+        .monogram .v-right {
+            top: -9px;
+            left: 4px;
+            z-index: 0;
+            clip-path: inset(0 0 0 12px);
+        }
+
+        .monogram .d {
+            top: 8px;
+            left: 3px;
+            z-index: 1;
+            transform: rotate(18deg);
+            -webkit-text-stroke: 1.5px #FFFFFF;
+            color: #7B4EFF;
+        }
+
+    </style>
 </head>
 <body>
+    <div class="monogram">
+        <span class="v-left">V</span>
+        <span class="d">D</span>
+        <span class="v-right">V</span>
+    </div>
     <h1>🎧 Welcome, {{ username }}!</h1>
     <p>Your Drop Cred: <strong>{{ drop_cred }}</strong></p>
 
+    <h2>Your Sound Circles</h2>
+    <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #7B4EFF;">
+                <th align="left">Circle Name</th>
+                <th align="left">Members</th>
+                <th align="left">Created On</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for circle in circles %}
+            <tr style="border-bottom: 1px solid #444;">
+                <td>
+                    <a href="{{ url_for('circle_dashboard', circle_id=circle.id) }}">
+                        {{ circle.circle_name }}
+                    </a>
+                </td>
+                <td>{{ circle.members|length }}</td>
+                <td>{{ circle.created_at.strftime('%b %d, %Y') if circle.created_at else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
     <form action="{{ url_for('create_circle') }}">
         <button type="submit">➕ Create Sound Circle</button>
+    </form>
+        
+    <form action="{{ url_for('join_circle') }}">
+        <button type="submit">🔗 Join Sound Circle</button>
     </form>
 </body>
 </html>

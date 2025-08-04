@@ -1,16 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>VibeDrop — Share Your Sound</title>
+  <meta charset="UTF-8">
+  <title>VibeDrop — Share Your Sound</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #121212;
+      color: #FFFFFF;
+      font-family: 'Space Grotesk', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+
+    .monogram {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin-bottom: 30px;
+    }
+
+    .letter {
+      font-size: 200px;
+      font-weight: 200;
+      position: absolute;
+      line-height: 1;
+      -webkit-text-stroke: 2px #7B4EFF;
+      color: #FFFFFF;
+    }
+
+    .v-left {
+      top: -50px;
+      left: 10px;
+      z-index: 2;
+      clip-path: inset(0 61px 0 0);
+    }
+
+    .v-right {
+      top: -50px;
+      left: 10px;
+      z-index: 0;
+      clip-path: inset(0 0 0 61px);
+    }
+
+    .d {
+      top: 75px;
+      left: 20px;
+      z-index: 1;
+      transform: rotate(18deg);
+      animation: bounceIn 2.5s ease-out;
+      -webkit-text-stroke: 2px #FFFFFF;
+      color: #7B4EFF;
+    }
+
+    @keyframes bounceIn {
+      0%   { transform: rotate(1deg) translateY(-80px); opacity: 0; }
+      90%  { transform: rotate(15deg) translateY(1px); opacity: 1; }
+      100% { transform: rotate(18deg) translateY(0); }
+    }
+
+    h1 { /* log in with spotify text */ 
+      font-size: 2.6rem;
+      margin-bottom: 15px;
+      color: #FFFFFF;
+    }
+
+    p {
+      font-size: 1.3rem;
+      color: #CCCCCC;
+      margin-bottom: 40px;
+    }
+
+    a button {
+      font-size: 1.1rem;
+      padding: 12px 24px;
+      border-radius: 8px;
+      background-color: #1DB954;
+      color: #000000;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    a button:hover {
+      background-color: #1AA34A;
+    }
+  </style>
 </head>
-<body style="font-family: sans-serif; text-align: center; margin-top: 100px;">
-    <h1 style="font-size: 2.5rem;">🎶 Welcome to VibeDrop</h1>
-    <p style="font-size: 1.2rem;">Log in with Spotify to drop your vibe</p>
-    <a href="{{ auth_url }}">
-        <button style="margin-top: 20px; font-size: 1.1rem; padding: 10px 20px; border-radius: 8px; background-color: black; color: white; border: none;">
-            🔐 Log in with Spotify
-        </button>
-    </a>
+<body>
+  <div class="monogram">
+    <span class="letter v-left">V</span>
+    <span class="letter d">D</span>
+    <span class="letter v-right">V</span>
+  </div>
+
+  <h1>🎶 Welcome to VibeDrop</h1>
+  <p>Log in with Spotify to drop your vibe</p>
+  <a href="{{ auth_url }}">
+    <button>🔐 Log in with Spotify</button>
+  </a>
 </body>
 </html>
