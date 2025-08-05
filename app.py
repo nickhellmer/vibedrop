@@ -13,7 +13,7 @@ import os
 from datetime import datetime, time, timedelta
 import pytz
 
-TESTING_MODE = False
+TESTING_MODE = True
 
 ### HELPER FUNCTIONS ###
 # helper function to get the current cycle's date
