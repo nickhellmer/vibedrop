@@ -138,7 +138,7 @@ def callback():
         # Update access token info and save
         user.access_token = access_token
         user.refresh_token = token_data.get('refresh_token')
-        user.expires_at = datetime.utcfromtimestamp(token_data.get('expires_at'))
+        user.expires_at = token_data.get('expires_at')
         db.session.commit()
         return redirect(url_for('dashboard'))
     else:
