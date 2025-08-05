@@ -139,7 +139,7 @@
     </form>
     
     <h2>Submitted Vibes</h2>
-    {% if show_submissions and submissions %}
+    {% if (show_submissions and submissions) or TESTING_MODE %}
       <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
         <thead>
           <tr style="border-bottom: 2px solid #7B4EFF;">

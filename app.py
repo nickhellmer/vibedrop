@@ -19,16 +19,14 @@ TESTING_MODE = False
 # helper function to get the current cycle's date
 def get_current_cycle_date(circle: SoundCircle) -> date | None:
     now = datetime.now().astimezone(pytz.timezone("US/Eastern"))
-    print(f"Now: {now}")
     today_weekday = now.weekday()  # Monday=0, Sunday=6
-    print(f"Today weekday: {today_weekday}")
 
     # Map weekday names to numbers
     day_map = {
         "Monday": 0, "Tuesday": 1, "Wednesday": 2,
         "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
     }
-    print(f"Raw drop_time: '{circle.drop_time}'")
+    
     try:
         drop_time_obj = datetime.strptime(circle.drop_time, "%H:%M").time()
         print(f"drop_time_obj: {drop_time_obj}")
@@ -44,7 +42,7 @@ def get_current_cycle_date(circle: SoundCircle) -> date | None:
 
     elif circle.drop_frequency.lower() == "biweekly":
         drop_days = [circle.drop_day1, circle.drop_day2]
-    print(f"Drop days: {drop_days}")
+        
     for drop_day in drop_days:
         drop_weekday = day_map.get(drop_day)
         if drop_weekday is None:
@@ -55,7 +53,7 @@ def get_current_cycle_date(circle: SoundCircle) -> date | None:
         drop_datetime = pytz.timezone("US/Eastern").localize(
             datetime.combine(drop_date, drop_time_obj)
         )
-        print(f"Evaluated drop date: {drop_date}")
+        
         if now < drop_datetime:
             return drop_date  # found a valid future cycle
 
@@ -136,8 +134,13 @@ def callback():
     }
 
     # Check if user already exists in DB
-    existing = User.query.filter_by(spotify_id=user_data['id']).first()
-    if existing:
+    user = User.query.filter_by(spotify_id=user_data['id']).first()
+    if user:
+        # Update access token info and save
+        user.access_token = access_token
+        user.refresh_token = token_data.get('refresh_token')
+        user.expires_at = datetime.utcfromtimestamp(token_data.get('expires_at'))
+        db.session.commit()
         return redirect(url_for('dashboard'))
     else:
         return redirect(url_for('register'))
