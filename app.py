@@ -116,7 +116,6 @@ def callback():
     code = request.args.get('code')
     token_data = get_token(code)
     access_token = token_data.get('access_token')
-    user.expires_at = token_data.get("expires_at")
 
     if not access_token:
         return "❌ Error getting Spotify access token.", 400
