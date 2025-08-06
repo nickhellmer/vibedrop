@@ -63,6 +63,10 @@ def get_user_profile(access_token):
     return response.json()
 
 def refresh_token_if_needed(session_user):
+    expires_at = session_user['expires_at']
+    if isinstance(expires_at, datetime.datetime):
+        expires_at = int(expires_at.timestamp())
+    
     token_info = {
         'access_token': session_user['access_token'],
         'refresh_token': session_user['refresh_token'],
