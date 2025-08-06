@@ -188,6 +188,8 @@ def logout():
 def dashboard():
     if 'user' not in session:
         return redirect(url_for('home'))
+    
+    refresh_token_if_needed(session['user'])  # Refresh token if needed
 
     user = User.query.filter_by(spotify_id=session['user']['id']).first()
     sound_circles = [membership.circle for membership in user.circle_memberships]
@@ -303,6 +305,8 @@ def get_previous_cycle_date(circle: SoundCircle) -> date | None:
 def circle_dashboard(circle_id):    
     if 'user' not in session:
         return redirect(url_for('home'))
+    
+    refresh_token_if_needed(session['user'])  # Refresh token if needed
 
     # Get circle, members, and submissions
     circle = SoundCircle.query.get_or_404(circle_id)
@@ -375,6 +379,8 @@ def circle_dashboard(circle_id):
 def submit_song(circle_id):
     if 'user' not in session:
         return redirect(url_for('home'))
+    
+    refresh_token_if_needed(session['user'])  # Refresh token if needed
 
     circle = SoundCircle.query.get_or_404(circle_id)
     user = User.query.filter_by(spotify_id=session['user']['id']).first()
@@ -434,6 +440,8 @@ def submit_song(circle_id):
 def create_playlist(circle_id):
     if 'user' not in session:
         return redirect(url_for('home'))
+    
+    refresh_token_if_needed(session['user'])  # Refresh token if needed
 
     user = User.query.filter_by(spotify_id=session['user']['id']).first()
     circle = SoundCircle.query.get_or_404(circle_id)
