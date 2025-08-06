@@ -13,7 +13,7 @@ import os
 from datetime import datetime, time, timedelta
 import pytz
 
-TESTING_MODE = True
+TESTING_MODE = False
 AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
 
 ### HELPER FUNCTIONS ###
