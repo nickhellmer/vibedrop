@@ -118,13 +118,20 @@ def home():
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
+    print("Received code:", code) # debug line 
+    
     token_data = get_token(code)
+    print("Token data:", token_data) # debug line
+    
     access_token = token_data.get('access_token')
+    print("Access token:", access_token) # debug line
 
     if not access_token:
         return "❌ Error getting Spotify access token.", 400
 
     user_data = get_user_profile(access_token)
+    print("User profile response:", user_data) # debug line
+    
     if user_data is None:
         return "❌ Failed to fetch Spotify profile. Please try logging in again.", 400
 
