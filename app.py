@@ -105,6 +105,10 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbackkey")
 db.init_app(app)
 migrate = Migrate(app, db)
 
+@app.route("/ping")
+def ping():
+    return "pong"
+
 @app.route('/')
 def home():
     if 'user' in session:
