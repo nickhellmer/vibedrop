@@ -28,8 +28,8 @@ def get_current_cycle_date(circle: SoundCircle) -> date | None:
     }
     
     try:
-        drop_time_obj = datetime.strptime(circle.drop_time, "%H:%M").time()
-        print(f"drop_time_obj: {drop_time_obj}")
+        drop_time_obj = circle.drop_time.time()
+        
     except Exception:
         return None  # fail-safe
 
@@ -63,7 +63,7 @@ def get_current_cycle_date(circle: SoundCircle) -> date | None:
 def has_deadline_passed(circle):
     # Parse drop time (e.g., "3:00 PM")
     try:
-        drop_time_obj = datetime.strptime(circle.drop_time, "%I:%M %p").time()
+        drop_time_obj = circle.drop_time.time()
     except Exception:
         return False  # fail-safe: don't show if format is invalid
 
@@ -193,7 +193,15 @@ def create_circle():
         drop_frequency = request.form.get('drop_frequency')
         drop_day1 = request.form.get('drop_day1')
         drop_day2 = request.form.get('drop_day2')
-        drop_time = request.form.get('drop_time')
+        drop_time_str = request.form.get('drop_time')
+        
+        # Convert to EST datetime (only the time matters, date is arbitrary)
+        try:
+            eastern = pytz.timezone("US/Eastern")
+            time_obj = datetime.strptime(drop_time_str, "%I:%M %p").time()
+            drop_time = eastern.localize(datetime.combine(date.today(), time_obj))
+        except ValueError:
+            return "❌ Invalid time format. Please use 12-hour format (e.g., 3:00 PM).", 400
 
         user = User.query.filter_by(spotify_id=session['user']['id']).first()
 
@@ -348,7 +356,8 @@ def circle_dashboard(circle_id):
         submissions=enriched_submissions if show_submissions else [],
         show_submissions=show_submissions,
         previous_submissions=previous_submissions,
-        testing_mode=TESTING_MODE
+        testing_mode=TESTING_MODE, 
+        format_time=lambda t: t.strftime("%I:%M %p EST")
     )
 
 @app.route('/circle/<int:circle_id>/submit', methods=['GET', 'POST'])
@@ -400,7 +409,7 @@ def submit_song(circle_id):
             user_id=user.id,
             spotify_track_id=spotify_track_id,
             cycle_date=cycle_date,
-            submitted_at=datetime.utcnow(),
+            submitted_at=datetime.now().astimezone(pytz.timezone("US/Eastern")),
             visible_to_others=False
         )
         db.session.add(new_submission)

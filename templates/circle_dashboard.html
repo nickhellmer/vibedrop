@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ circle.circle_name }} - VibeDrop</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;600&display=swap" rel="stylesheet">
   <style>
@@ -109,6 +110,76 @@
       -webkit-text-stroke: 1.5px #FFFFFF;
       color: #7B4EFF;
     }
+      
+    @media (max-width: 768px) {
+      body {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+        text-align: center;
+      }
+
+      h2 {
+        font-size: 1.4rem;
+        margin-top: 30px;
+        margin-bottom: 12px;
+      }
+
+      p, li, td, th {
+        font-size: 0.95rem;
+      }
+
+      ul {
+        padding-left: 0;
+      }
+
+      button {
+        width: 100%;
+        padding: 14px;
+        font-size: 1rem;
+        margin-top: 15px;
+      }
+
+      table {
+        font-size: 0.95rem;
+      }
+
+      .monogram {
+        width: 30px;
+        height: 30px;
+        top: 15px;
+        left: 15px;
+      }
+
+      .monogram span {
+        font-size: 30px;
+      }
+
+      .monogram .v-left,
+      .monogram .v-right {
+        top: -6px;
+        left: 3px;
+      }
+
+      .monogram .d {
+        top: 6px;
+        left: 2px;
+      }
+
+      a {
+        font-size: 0.95rem;
+        display: block;
+        text-align: center;
+        margin-top: 30px;
+      }
+
+      table th,
+      table td {
+        padding: 6px 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -120,7 +191,7 @@
 
   <h1>🎶 {{ circle.circle_name }}</h1>
   <p><strong>Drop Frequency:</strong> {{ circle.drop_frequency }}</p>
-  <p><strong>Drop Time:</strong> {{ circle.drop_time }}</p>
+  <p><strong>Drop Time:</strong> {{ format_time(circle.drop_time) }}</p>
   <p><strong>Invite Code:</strong> {{ circle.invite_code }}</p>
 
   <h2>Members</h2>
@@ -153,7 +224,7 @@
             <tr style="border-bottom: 1px solid #444;">
               <td>{{ submission.track_name or "Unknown Title" }}</td>
               <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-              <td>{{ submission.submitted_at.strftime('%b %d, %Y') }}</td>
+              <td>{{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') }} EST</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -183,7 +254,7 @@
             <tr style="border-bottom: 1px solid #444;">
               <td>{{ submission.track_name or "Unknown Title" }}</td>
               <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-              <td>{{ submission.submitted_at.strftime('%b %d, %Y') }}</td>
+              <td>{{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') }} EST</td>
             </tr>
           {% endfor %}
         </tbody>

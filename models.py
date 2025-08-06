@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.types import DateTime
 
 db = SQLAlchemy()
 
@@ -27,10 +28,10 @@ class User(db.Model):
 class SoundCircle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     circle_name = db.Column(db.String(100), unique=True, nullable=False)
-    drop_frequency = db.Column(db.String(20), nullable=False)  # 'daily', 'weekly', 'biweekly'
+    drop_frequency = db.Column(db.String(20), nullable=False)   # 'daily', 'weekly', 'biweekly'
     drop_day1 = db.Column(db.String(20), nullable=True)         # e.g., 'Monday'
     drop_day2 = db.Column(db.String(20), nullable=True)         # Only used if biweekly
-    drop_time = db.Column(db.String(10), nullable=False)        # e.g., '3:00 PM'
+    drop_time = db.Column(DateTime, nullable=False)             # changed from string to datetime
     invite_code = db.Column(db.String(10), unique=True)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=db.func.now())

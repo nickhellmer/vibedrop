@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Choose Your VibeDrop Username</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
@@ -31,6 +32,8 @@
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 0 10px rgba(187, 134, 252, 0.2);
+            width: 90vw;
+            max-width: 400px; 
         }
 
         label {
@@ -45,6 +48,7 @@
             background-color: #2A2A2A;
             color: #FFFFFF;
             font-size: 1em;
+            width: 100%;
         }
 
         button {
@@ -57,10 +61,21 @@
             font-size: 1em;
             cursor: pointer;
             transition: background-color 0.2s ease-in-out;
+            width: 100%;
         }
 
         button:hover {
             background-color: #9C6FFB;
+        }
+        
+        @media (max-width: 400px) {
+            h2 {
+                font-size: 1.5em;
+            }
+
+            label, input, button {
+                font-size: 0.95em;
+            }
         }
     </style>
 </head>

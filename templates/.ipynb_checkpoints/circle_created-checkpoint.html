@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sound Circle Created!</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;600&display=swap" rel="stylesheet">
   <style>
@@ -89,6 +90,57 @@
       transform: rotate(18deg);
       -webkit-text-stroke: 1.5px #FFFFFF;
       color: #7B4EFF;
+    }
+      
+    @media (max-width: 768px) {
+      body {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      p {
+        font-size: 1rem;
+        text-align: center;
+      }
+
+      button {
+        width: 100%;
+        padding: 14px;
+        font-size: 1rem;
+        margin-bottom: 15px;
+      }
+
+      a {
+        display: block;
+        text-align: center;
+        margin: 0 auto;
+      }
+
+      .monogram {
+        width: 30px;
+        height: 30px;
+        top: 15px;
+        left: 15px;
+      }
+
+      .monogram span {
+        font-size: 30px;
+      }
+
+      .monogram .v-left,
+      .monogram .v-right {
+        top: -6px;
+        left: 3px;
+      }
+
+      .monogram .d {
+        top: 6px;
+        left: 2px;
+      }
     }
   </style>
 </head>
