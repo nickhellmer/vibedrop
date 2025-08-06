@@ -64,7 +64,7 @@ def get_user_profile(access_token):
 
 def refresh_token_if_needed(session_user):
     expires_at = session_user['expires_at']
-    if isinstance(expires_at, datetime.datetime):
+    if isinstance(expires_at, datetime):
         expires_at = int(expires_at.timestamp())
     
     token_info = {
