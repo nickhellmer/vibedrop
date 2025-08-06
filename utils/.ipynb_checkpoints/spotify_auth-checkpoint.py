@@ -63,16 +63,22 @@ def get_user_profile(access_token):
     return response.json()
 
 def refresh_token_if_needed(session_user):
+    expires_at = session_user['expires_at']
+    
+    # Convert to UNIX timestamp if it's a datetime object
+    if isinstance(expires_at, datetime):
+        expires_at = int(expires_at.timestamp())
+    
     token_info = {
         'access_token': session_user['access_token'],
         'refresh_token': session_user['refresh_token'],
-        'expires_at': session_user['expires_at']
+        'expires_at': expires_at
     }
 
     sp_oauth = SpotifyOAuth(
-        client_id=os.getenv("SPOTIPY_CLIENT_ID"),
-        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
-        redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
+        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
         scope="user-read-private playlist-modify-public playlist-modify-private"
     )
 

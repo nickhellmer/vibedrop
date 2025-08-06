@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request, render_template, session, url_for
+from flask import Flask, redirect, request, render_template, session, url_for, flash
 from models import db, User, SoundCircle, CircleMembership, Submission
 import spotipy
 from spotipy import Spotify
@@ -14,6 +14,7 @@ from datetime import datetime, time, timedelta
 import pytz
 
 TESTING_MODE = True
+AUTO_PUSH_TO_PREVIOUS = True # songs added immediately go to previous cycle 
 
 ### HELPER FUNCTIONS ###
 # helper function to get the current cycle's date
@@ -276,6 +277,10 @@ def join_circle():
 
 ### helper to get circle's most previous set of data ###
 def get_previous_cycle_date(circle: SoundCircle) -> date | None:
+    if TESTING_MODE and AUTO_PUSH_TO_PREVIOUS:
+        # Pretend the current date is a valid "previous cycle" for testing
+        return datetime.now().astimezone(pytz.timezone("US/Eastern")).date()
+    
     now = datetime.now().astimezone(pytz.timezone("US/Eastern"))
     today = now.date()
     weekday_today = today.strftime('%A')
@@ -449,8 +454,10 @@ def create_playlist(circle_id):
     # Get previous cycle date
     previous_date = get_previous_cycle_date(circle)
     if not previous_date:
+        # flash("⚠️ No previous cycle to create playlist from.")
+        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return "⚠️ No previous cycle to create playlist from.", 400
-
+        
     # Get submissions from previous cycle
     previous_submissions = Submission.query.filter_by(
         circle_id=circle.id,
@@ -458,6 +465,8 @@ def create_playlist(circle_id):
     ).all()
 
     if not previous_submissions:
+        # flash("⚠️ No submissions found for the previous cycle.")
+        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return "⚠️ No submissions found for the previous cycle.", 400
 
     # Spotify auth
@@ -476,13 +485,18 @@ def create_playlist(circle_id):
             description=description
         )
 
-        track_uris = [f"spotify:track:{sub.spotify_track_id}" for sub in previous_submissions]
+        track_uris = [f"spotify:track:{sub.spotify_track_id}" for sub in previous_submissions if sub.spotify_track_id]
         sp.playlist_add_items(playlist_id=playlist['id'], items=track_uris)
+        print("✅ Created playlist:", playlist['external_urls']['spotify'], flush=True)
 
+        # flash(f"✅ Playlist '{playlist_name}' created on your Spotify!")
+        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return f"✅ Playlist '{playlist_name}' created and added to your Spotify!", 200
 
     except Exception as e:
         print("Playlist creation error:", e)
+        # flash("❌ Failed to create playlist. Try logging out and back in.")
+        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return "❌ Failed to create playlist. Try logging out and back in.", 500
 
 if __name__ == "__main__":
