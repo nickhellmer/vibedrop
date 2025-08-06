@@ -14,7 +14,7 @@ from datetime import datetime, time, timedelta
 import pytz
 
 TESTING_MODE = True
-AUTO_PUSH_TO_PREVIOUS = True # songs added immediately go to previous cycle 
+AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
 
 ### HELPER FUNCTIONS ###
 # helper function to get the current cycle's date
