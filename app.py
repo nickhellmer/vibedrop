@@ -108,6 +108,13 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
 def ping():
     return "pong"
 
+# helps with updating database in deployed version
+@app.route("/run-migrations")
+def run_migrations():
+    from flask_migrate import upgrade
+    upgrade()
+    return "✅ Migrations applied."
+
 @app.route('/')
 def home():
     if 'user' in session:
