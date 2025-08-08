@@ -1,4 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy
+# from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.types import DateTime
 from datetime import datetime
 import pytz

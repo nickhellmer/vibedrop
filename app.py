@@ -1,18 +1,18 @@
 from flask import Flask, redirect, request, render_template, session, url_for, flash
 from models import db, User, SoundCircle, CircleMembership, Submission
 import spotipy
-from spotipy import Spotify
+# from spotipy import Spotify
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
 from datetime import datetime, date, time, timedelta
 from dotenv import load_dotenv
-import secrets  # for join codes
+# import secrets  # for join codes
 import random
 import string
 from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
+# from flask_sqlalchemy import SQLAlchemy
 import os
 import pytz
-from pytz import timezone
+# from pytz import timezone
 
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
@@ -167,7 +167,7 @@ def callback():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
+        username = request.form.get('vibedrop_username')
         spotify_id = session['user']['id']
         access_token = session['user']['access_token']
 
