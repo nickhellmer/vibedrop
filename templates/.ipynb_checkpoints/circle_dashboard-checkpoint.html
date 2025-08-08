@@ -111,6 +111,28 @@
       color: #7B4EFF;
     }
       
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #444;
+    }
+
+    th {
+      color: #7B4EFF;
+      font-size: 1.1rem;
+    }
+
+    td {
+      font-size: 1.05rem;
+      color: #FFFFFF;
+    }
+      
     @media (max-width: 768px) {
       body {
         padding: 20px;
@@ -193,60 +215,69 @@
       {% endif %}
     {% endwith %} -->
     
-  <div class="monogram">
-    <span class="v-left">V</span>
-    <span class="d">D</span>
-    <span class="v-right">V</span>
-  </div>
+    <div class="monogram">
+        <span class="v-left">V</span>
+        <span class="d">D</span>
+        <span class="v-right">V</span>
+    </div>
 
-  <h1>🎶 {{ circle.circle_name }}</h1>
-  <p><strong>Drop Frequency:</strong> {{ circle.drop_frequency }}</p>
-  <p><strong>Drop Time:</strong> {{ format_time(circle.drop_time) }}</p>
-  <p><strong>Invite Code:</strong> {{ circle.invite_code }}</p>
+    <h1>🎶 {{ circle.circle_name }}</h1>
+    <p><strong>Drop Frequency:</strong> {{ circle.drop_frequency }}</p>
+    <p><strong>Drop Time:</strong> {{ circle.drop_time | to_est }}</p>
+    <p><strong>Invite Code:</strong> {{ circle.invite_code }}</p>
 
-  <h2>Members</h2>
-  {% if members %}
-    <ul>
-    {% for member in members %}
-      <li>{{ member.vibedrop_username }}</li>
-    {% endfor %}
-    </ul>
-  {% else %}
-    <p>No members yet.</p>
-  {% endif %}
+    <h2>Members</h2>
+    <table>
+        <tr>
+            <th>Username</th>
+            <th>Submitted This Cycle?</th>
+        </tr>
+        {% for member in members %}
+        <tr>
+            <td>{{ member.vibedrop_username }}</td>
+            <td>
+                {% if member.id in submitted_user_ids %}
+                    ✅
+                {% else %}
+                    ❌
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
 
     <form action="{{ url_for('submit_song', circle_id=circle.id) }}">
         <button type="submit">🎵 Submit a Vibe</button>
     </form>
     
-    <h2>Submitted Vibes</h2>
-    {% if (show_submissions and submissions) or TESTING_MODE %}
-      <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
-        <thead>
-          <tr style="border-bottom: 2px solid #7B4EFF;">
-            <th align="left">Vibe Name</th>
-            <th align="left">Vibe Artist</th>
-            <th align="left">Submitted On</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for submission in submissions %}
-            <tr style="border-bottom: 1px solid #444;">
-              <td>{{ submission.track_name or "Unknown Title" }}</td>
-              <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-              <td>{{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') }} EST</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% elif not show_submissions %}
-      <p>⏳ Submissions will unlock after the drop deadline!</p>
-    {% else %}
-      <p>No vibes dropped yet.</p>
+    {% if TESTING_MODE %}
+        <h2>Submitted Vibes (Testing Mode Only)</h2>
+        {% if submissions %}
+          <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr style="border-bottom: 2px solid #7B4EFF;">
+                <th align="left">Vibe Name</th>
+                <th align="left">Vibe Artist</th>
+                <th align="left">Submitted On</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for submission in submissions %}
+                <tr style="border-bottom: 1px solid #444;">
+                  <td>{{ submission.track_name or "Unknown Title" }}</td>
+                  <td>{{ submission.track_artist or "Unknown Artist" }}</td>
+                  <td>{{ submission.submitted_at|to_est }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>No vibes dropped yet.</p>
+        {% endif %}
     {% endif %}
     
-    <h2>⏮ Previous Cycle Vibes</h2>
-    {% if previous_submissions or TESTING_MODE %}
+    <h2>🎶 Fresh From the Drop — Build Your Playlist</h2>
+    {% if previous_submissions %}
       <form action="{{ url_for('create_playlist', circle_id=circle.id) }}" method="POST">
           <button type="submit">🎧 Create Spotify Playlist</button>
       </form>
@@ -264,13 +295,13 @@
             <tr style="border-bottom: 1px solid #444;">
               <td>{{ submission.track_name or "Unknown Title" }}</td>
               <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-              <td>{{ submission.submitted_at.strftime('%b %d, %Y at %I:%M %p') }} EST</td>
+              <td>{{ submission.submitted_at|to_est }}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     {% else %}
-      <p>🕐 No previous cycles yet — this Sound Circle is just getting started!</p>
+      <p>🕐 No previous cycles yet — this Sound Circle is just getting started! Check back after the next drop deadline</p>
     {% endif %}
     
     

@@ -3,108 +3,106 @@ from models import db, User, SoundCircle, CircleMembership, Submission
 import spotipy
 from spotipy import Spotify
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
-from datetime import date, datetime
+from datetime import datetime, date, time, timedelta
 from dotenv import load_dotenv
 import secrets  # for join codes
 import random
 import string
 from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 import os
-from datetime import datetime, time, timedelta
 import pytz
+from pytz import timezone
 
-TESTING_MODE = True
-AUTO_PUSH_TO_PREVIOUS = True # songs added immediately go to previous cycle 
+def utcnow():
+    return datetime.utcnow().replace(tzinfo=pytz.utc)
 
-### HELPER FUNCTIONS ###
-# helper function to get the current cycle's date
-def get_current_cycle_date(circle: SoundCircle) -> date | None:
-    now = datetime.now().astimezone(pytz.timezone("US/Eastern"))
-    today_weekday = now.weekday()  # Monday=0, Sunday=6
+TESTING_MODE = False
+AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
+
+### LOAD ENVIRONMENT VARIABLES ######################
+load_dotenv()
+
+app = Flask(__name__)
+app.permanent_session_lifetime = timedelta(days=7)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL", "sqlite:///instance/vibedrop.db")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbackkey")
+db.init_app(app)
+migrate = Migrate(app, db)
+
+### HELPER FUNCTIONS ######################
+# get a circle's next drop time, previous drop time, and second most previous droptime 
+def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime] | None:
+    eastern = pytz.timezone("US/Eastern")
+    now = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(eastern)
+    
+    drop_time_obj = circle.drop_time.time()
+
+    def local_drop_datetime(base_date):
+        return eastern.localize(datetime.combine(base_date, drop_time_obj))
+
+    if circle.drop_frequency.lower() == "daily":
+        today_drop = local_drop_datetime(now.date()) # save today's droptime as datetime, whether today's droptime has passed or not 
+        
+        # save next drop 
+        if now < today_drop:
+            next_drop = today_drop
+        else:
+            next_drop = today_drop + timedelta(days=1)
+
+        most_recent_drop = next_drop - timedelta(days=1) # save most recent drop 
+        second_most_recent_drop = next_drop - timedelta(days=2) # save second most recent drop 
+        return next_drop, most_recent_drop, second_most_recent_drop
 
     # Map weekday names to numbers
     day_map = {
         "Monday": 0, "Tuesday": 1, "Wednesday": 2,
         "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
     }
-    
-    try:
-        drop_time_obj = circle.drop_time.time()
-        
-    except Exception:
-        return None  # fail-safe
 
     drop_days = []
-    if circle.drop_frequency.lower() == "daily":
-        return now.date()
-
-    elif circle.drop_frequency.lower() == "weekly":
+    if circle.drop_frequency.lower() == "weekly":
         drop_days = [circle.drop_day1]
-
     elif circle.drop_frequency.lower() == "biweekly":
         drop_days = [circle.drop_day1, circle.drop_day2]
-        
-    for drop_day in drop_days:
-        drop_weekday = day_map.get(drop_day)
-        if drop_weekday is None:
-            continue
-        days_until = (drop_weekday - today_weekday) % 7
-        drop_date = now.date() + timedelta(days=days_until)
-
-        drop_datetime = pytz.timezone("US/Eastern").localize(
-            datetime.combine(drop_date, drop_time_obj)
-        )
-        
-        if now < drop_datetime:
-            return drop_date  # found a valid future cycle
-
-    return None  # past all deadlines
-
-# helper function to get circle deadline 
-def has_deadline_passed(circle):
-    # Parse drop time (e.g., "3:00 PM")
-    try:
-        drop_time_obj = circle.drop_time.time()
-    except Exception:
-        return False  # fail-safe: don't show if format is invalid
-
-    # Get today's day name (e.g., "Friday")
-    today_day = datetime.now().astimezone(pytz.timezone("US/Eastern")).strftime("%A")
-
-    # Only continue if today is one of the drop days
-    if circle.drop_frequency == "daily":
-        show = True
-    elif circle.drop_frequency == "weekly":
-        show = (today_day == circle.drop_day1)
-    elif circle.drop_frequency == "biweekly":
-        show = (today_day in [circle.drop_day1, circle.drop_day2])
     else:
-        show = False
+        return None
 
-    if not show:
-        return False
+    # Generate a list of drop datetimes for the last and next 14 days
+    drop_datetimes = []
+    for i in range(-15, 9):
+        test_date = now.date() + timedelta(days=i)
+        if test_date.strftime("%A") in drop_days:
+            drop_datetimes.append(local_drop_datetime(test_date))
 
-    # Build the full drop datetime in EST
-    now_est = datetime.now().astimezone(pytz.timezone("US/Eastern"))
-    drop_deadline = datetime.combine(now_est.date(), drop_time_obj)
-    drop_deadline = pytz.timezone("US/Eastern").localize(drop_deadline)
+    # Sort and get relevant windows
+    drop_datetimes = sorted(drop_datetimes)
+    for i, dt in enumerate(drop_datetimes):
+        if dt > now:
+            next_drop = dt
+            most_recent_drop = drop_datetimes[i - 1] if i - 1 >= 0 else None
+            second_most_recent_drop = drop_datetimes[i - 2] if i - 2 >= 0 else None
+            if most_recent_drop and second_most_recent_drop:
+                return next_drop, most_recent_drop, second_most_recent_drop
+            else:
+                return None
+    
+    print("[DEBUG] Unexpected: get_cycle_window() could not determine drop window.")
+    return None
 
-    # Check if current time has passed the deadline
-    return now_est >= drop_deadline
 
-### END HELPER FUNCTIONS ######################
+# # helper function to get the current cycle's date
+# def get_current_cycle_date(circle: SoundCircle) -> date | None:
+
+# # helper function to get circle deadline 
+# def has_deadline_passed(circle):
+
+# # helper to get circle's most previous set of data #
+# def get_previous_cycle_date(circle: SoundCircle) -> date | None:
 
 
-
-# Load environment variables
-load_dotenv()
-
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vibedrop.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallbackkey")
-db.init_app(app)
-migrate = Migrate(app, db)
+### ALL ROUTES ######################
 
 @app.route("/ping")
 def ping():
@@ -136,6 +134,9 @@ def callback():
     if user_data is None:
         return "❌ Failed to fetch Spotify profile. Please try logging in again.", 400
 
+    # make session permanent
+    session.permanent = True
+    
     session['user'] = {
         'id': user_data['id'],
         'display_name': user_data.get('display_name', 'Unknown'),
@@ -275,37 +276,6 @@ def join_circle():
 
     return render_template('join_circle.html')
 
-### helper to get circle's most previous set of data ###
-def get_previous_cycle_date(circle: SoundCircle) -> date | None:
-    if TESTING_MODE and AUTO_PUSH_TO_PREVIOUS:
-        # Pretend the current date is a valid "previous cycle" for testing
-        return datetime.now().astimezone(pytz.timezone("US/Eastern")).date()
-    
-    now = datetime.now().astimezone(pytz.timezone("US/Eastern"))
-    today = now.date()
-    weekday_today = today.strftime('%A')
-
-    if circle.drop_frequency == "daily":
-        return today - timedelta(days=1)
-
-    elif circle.drop_frequency == "weekly":
-        drop_index = list(calendar.day_name).index(circle.drop_day1)
-        days_back = (today.weekday() - drop_index) % 7
-        if days_back == 0 and not has_deadline_passed(circle):
-            days_back = 7
-        return today - timedelta(days=days_back)
-
-    elif circle.drop_frequency == "biweekly":
-        drop_days = [circle.drop_day1, circle.drop_day2]
-        drop_indexes = sorted(list(calendar.day_name).index(d) for d in drop_days)
-
-        for offset in range(1, 15):
-            candidate = today - timedelta(days=offset)
-            if candidate.strftime('%A') in drop_days:
-                return candidate
-
-    return None
-
 @app.route('/circle/<int:circle_id>')
 def circle_dashboard(circle_id):    
     if 'user' not in session:
@@ -313,61 +283,62 @@ def circle_dashboard(circle_id):
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
 
-    # Get circle, members, and submissions
+    # Get circle and members
     circle = SoundCircle.query.get_or_404(circle_id)
     members = circle.members
-    submissions = Submission.query.filter_by(circle_id=circle.id).order_by(Submission.submitted_at.desc()).all()
-
+    
+    # Get drop window (next_drop, most_recent_drop, second_most_recent_drop)
+    drop_window = get_cycle_window(circle)
+    if not drop_window:
+        return "Unable to determine drop cycle for this circle.", 400
+    next_drop, most_recent_drop, second_most_recent_drop = drop_window
+    now = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(pytz.timezone("US/Eastern"))
+    
+    # Get user_ids who have submitted since the most recent drop
+    recent_submissions = Submission.query.filter(
+        Submission.circle_id == circle.id,
+        Submission.submitted_at >= most_recent_drop,
+        Submission.submitted_at < next_drop
+    ).all()
+    submitted_user_ids = {sub.user_id for sub in recent_submissions}
+    
     # Initialize Spotipy client
     if 'access_token' not in session['user']:
         return redirect(url_for('home'))
     sp = spotipy.Spotify(auth=session['user']['access_token'])
     print("Access token in session:", session['user']['access_token'])
-
-    # Enrich each submission with track name and artist
+    
+    # Categorize submissions
+    all_submissions = Submission.query.filter_by(circle_id=circle.id).order_by(Submission.submitted_at.desc()).all()
     enriched_submissions = []
-    for sub in submissions:
+    previous_submissions = []
+    
+    for sub in all_submissions:
+        if sub.submitted_at.replace(tzinfo=pytz.utc) <= second_most_recent_drop:
+            continue  # Skip songs older than 2 cycles
+        
         try:
             track = sp.track(sub.spotify_track_id)
-            print("Fetched track:", track)
             track_name = track['name']
+            print("Fetched track name:", track['name'])
             artist_name = track['artists'][0]['name']
         except Exception:
             track_name = "Unknown Vibe"
             artist_name = "Unknown Artist"
 
-        enriched_submissions.append({
+        enriched = {
             'track_name': track_name,
             'track_artist': artist_name,
             'submitted_at': sub.submitted_at
-        })
+        }
+
+        if most_recent_drop <= sub.submitted_at.replace(tzinfo=pytz.utc) < next_drop:
+            enriched_submissions.append(enriched)
+        elif second_most_recent_drop <= sub.submitted_at.replace(tzinfo=pytz.utc) < most_recent_drop:
+            previous_submissions.append(enriched)
 
     # boolean for if to show submissions or not 
-    show_submissions = has_deadline_passed(circle) or TESTING_MODE
-    
-    # Previous cycle submissions
-    prev_cycle_date = get_previous_cycle_date(circle)
-    previous_submissions = []
-    if prev_cycle_date:
-        prev_subs = Submission.query.filter_by(
-            circle_id=circle.id,
-            cycle_date=prev_cycle_date
-        ).order_by(Submission.submitted_at.desc()).all()
-
-        for sub in prev_subs:
-            try:
-                track = sp.track(sub.spotify_track_id)
-                track_name = track['name']
-                artist_name = track['artists'][0]['name']
-            except Exception:
-                track_name = "Unknown Vibe"
-                artist_name = "Unknown Artist"
-
-            previous_submissions.append({
-                'track_name': track_name,
-                'track_artist': artist_name,
-                'submitted_at': sub.submitted_at
-            })
+    show_submissions = TESTING_MODE
 
     return render_template(
         'circle_dashboard.html',
@@ -377,7 +348,7 @@ def circle_dashboard(circle_id):
         show_submissions=show_submissions,
         previous_submissions=previous_submissions,
         testing_mode=TESTING_MODE, 
-        format_time=lambda t: t.strftime("%I:%M %p EST")
+        submitted_user_ids=submitted_user_ids,
     )
 
 @app.route('/circle/<int:circle_id>/submit', methods=['GET', 'POST'])
@@ -405,22 +376,19 @@ def submit_song(circle_id):
                 return "❌ Invalid Spotify track URL format.", 400
         except Exception:
             return "❌ Could not parse Spotify track URL.", 400
-
-        cycle_date = get_current_cycle_date(circle)
-        if not cycle_date:
-            return "⏳ You can only drop on your Sound Circle’s scheduled days.", 400
+    
+        # get drop window, next drop, and most recent drop
+        drop_window = get_cycle_window(circle)
+        if not drop_window:
+            return "⏳ Could not determine a valid drop window for this Sound Circle.", 400
+        next_drop, most_recent_drop, _ = drop_window
 
         # Check if this user has already submitted for today's cycle
-        existing = Submission.query.filter_by(
-            circle_id=circle.id,
-            user_id=user.id,
-            cycle_date=cycle_date
-        ).first()
         if not TESTING_MODE:
-            existing = Submission.query.filter_by(
-                circle_id=circle.id,
-                user_id=user.id,
-                cycle_date=cycle_date
+            existing = Submission.query.filter(
+                Submission.circle_id == circle.id,
+                Submission.user_id == user.id,
+                Submission.submitted_at > most_recent_drop
             ).first()
             if existing:
                 return "❌ You’ve already submitted a vibe for this cycle.", 400
@@ -430,8 +398,8 @@ def submit_song(circle_id):
             circle_id=circle.id,
             user_id=user.id,
             spotify_track_id=spotify_track_id,
-            cycle_date=cycle_date,
-            submitted_at=datetime.now().astimezone(pytz.timezone("US/Eastern")),
+            cycle_date=most_recent_drop.date(),
+            submitted_at=utcnow(),
             visible_to_others=False
         )
         db.session.add(new_submission)
@@ -451,29 +419,40 @@ def create_playlist(circle_id):
     user = User.query.filter_by(spotify_id=session['user']['id']).first()
     circle = SoundCircle.query.get_or_404(circle_id)
 
-    # Get previous cycle date
-    previous_date = get_previous_cycle_date(circle)
-    if not previous_date:
-        # flash("⚠️ No previous cycle to create playlist from.")
-        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
-        return "⚠️ No previous cycle to create playlist from.", 400
-        
-    # Get submissions from previous cycle
-    previous_submissions = Submission.query.filter_by(
-        circle_id=circle.id,
-        cycle_date=previous_date
-    ).all()
+    # Get drop window using new logic
+    drop_window = get_cycle_window(circle)
+    if not drop_window:
+        return "⚠️ Could not determine drop cycle.", 400
 
+    # save next, most recent, and second most recent drops as utc datetime for comparison in previous_submissions query
+    next_drop, most_recent_drop, second_most_recent_drop = (
+        drop_window[0].astimezone(pytz.utc),
+        drop_window[1].astimezone(pytz.utc),
+        drop_window[2].astimezone(pytz.utc),
+    )
+
+    # Get submissions from previous cycle
+    previous_submissions = [
+        sub for sub in Submission.query.filter_by(circle_id=circle.id).all()
+        if sub.submitted_at.replace(tzinfo=pytz.utc) > second_most_recent_drop
+        and sub.submitted_at.replace(tzinfo=pytz.utc) <= most_recent_drop
+    ]
+    
+    all_subs = Submission.query.filter_by(circle_id=circle.id).all()
+    for sub in all_subs:
+        print("submitted_at =", sub.submitted_at.isoformat())
+    print("next_drop:", next_drop)
+    print("previous_submissions", previous_submissions)
+    print("Second most recent drop:", second_most_recent_drop.isoformat())
+    print("Most recent drop:", most_recent_drop.isoformat())
     if not previous_submissions:
-        # flash("⚠️ No submissions found for the previous cycle.")
-        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return "⚠️ No submissions found for the previous cycle.", 400
 
     # Spotify auth
     sp = spotipy.Spotify(auth=session['user']['access_token'])
 
     # Create playlist
-    today_str = previous_date.strftime('%b %d, %Y')
+    today_str = most_recent_drop.strftime('%b %d, %Y')
     playlist_name = f"VibeDrop - {circle.circle_name} - {today_str}"
     description = f"Vibes from the {circle.circle_name} Sound Circle on {today_str}"
 
@@ -498,6 +477,14 @@ def create_playlist(circle_id):
         # flash("❌ Failed to create playlist. Try logging out and back in.")
         # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return "❌ Failed to create playlist. Try logging out and back in.", 500
+    
+# timezone display filter helper
+@app.template_filter('to_est')
+def to_est_filter(dt_utc):
+    if dt_utc is None:
+        return ""
+    est = pytz.timezone('US/Eastern')
+    return dt_utc.astimezone(est).strftime('%b %d, %Y at %I:%M %p EST')
 
 if __name__ == "__main__":
     with app.app_context():

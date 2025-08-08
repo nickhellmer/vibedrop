@@ -156,7 +156,7 @@
         <span class="d">D</span>
         <span class="v-right">V</span>
     </div>
-    <h1>🎧 Welcome, {{ username }}!</h1>
+    <h1>🎧 Welcome, {{ vibedrop_username }}!</h1>
     <p>Your Drop Cred: <strong>{{ drop_cred }}</strong></p>
 
     <h2>Your Sound Circles</h2>
@@ -177,7 +177,7 @@
                     </a>
                 </td>
                 <td>{{ circle.members|length }}</td>
-                <td>{{ circle.created_at.strftime('%b %d, %Y') if circle.created_at else '—' }}</td>
+                <td>{{ circle.created_at|to_est if circle.created_at else '—' }}</td>
             </tr>
             {% endfor %}
         </tbody>

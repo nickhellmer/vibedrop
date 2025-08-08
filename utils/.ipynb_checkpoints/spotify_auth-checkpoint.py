@@ -21,7 +21,7 @@ CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 
 # What permissions we request from the user
-SCOPE = "user-read-private playlist-modify-public"
+SCOPE = "user-read-private playlist-modify-public playlist-modify-private"
 
 def get_auth_url():
     params = {
@@ -79,7 +79,7 @@ def refresh_token_if_needed(session_user):
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
         redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
-        scope="user-read-private playlist-modify-public playlist-modify-private"
+        scope=SCOPE
     )
 
     if sp_oauth.is_token_expired(token_info):
