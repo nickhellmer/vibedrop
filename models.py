@@ -20,6 +20,8 @@ def utcnow():
 
 # Stores all VibeDrop users (each user is one row)
 class User(db.Model):
+    __tablename__ = 'users'
+    
     id = db.Column(db.Integer, primary_key=True)
     spotify_id = db.Column(db.String(128), unique=True, nullable=False)
     vibedrop_username = db.Column(db.String(64), unique=True, nullable=False)
@@ -42,6 +44,8 @@ class User(db.Model):
 
 # Stores all Sound Circles (each circle is one row)
 class SoundCircle(db.Model):
+    __tablename__ = 'sound_circles'
+    
     id = db.Column(db.Integer, primary_key=True)
     circle_name = db.Column(db.String(100), unique=True, nullable=False)
     drop_frequency = db.Column(db.String(20), nullable=False)
@@ -49,7 +53,7 @@ class SoundCircle(db.Model):
     drop_day2 = db.Column(db.String(20), nullable=True)
     drop_time = db.Column(DateTime, nullable=False)
     invite_code = db.Column(db.String(10), unique=True)
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     circle_memberships = db.relationship('CircleMembership', back_populates='circle')
 
@@ -67,9 +71,11 @@ class SoundCircle(db.Model):
 
 # Links users to circles (one row per user–circle membership)
 class CircleMembership(db.Model):
+    __tablename__ = 'circle_memberships'
+    
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circle.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circles.id'), nullable=False)
     joined_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
     user = db.relationship('User', back_populates='circle_memberships')
@@ -85,9 +91,11 @@ class CircleMembership(db.Model):
 
 # Stores all submitted songs, tagged by user and circle
 class Submission(db.Model):
+    __tablename__ = 'submissions'
+    
     id = db.Column(db.Integer, primary_key=True)
-    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circle.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circles.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     spotify_track_id = db.Column(db.String(100), nullable=False)
     cycle_date = db.Column(db.Date, nullable=False)
     submitted_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
@@ -97,9 +105,11 @@ class Submission(db.Model):
     
 # Stores all likes/dislikes on submissions
 class SongFeedback(db.Model):
+    __tablename__ = 'song_feedback'
+    
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    song_id = db.Column(db.Integer, db.ForeignKey('submission.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    song_id = db.Column(db.Integer, db.ForeignKey('submissions.id'), nullable=False)
     feedback = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -107,9 +117,11 @@ class SongFeedback(db.Model):
 
 # Stores all user–user similarity scores (Drop Index)
 class VibeScore(db.Model):
+    __tablename__ = 'vibe_scores'
+    
     id = db.Column(db.Integer, primary_key=True)
-    user1_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user2_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user1_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user2_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     vibe_index = db.Column(db.Float, nullable=False)
     last_updated = db.Column(db.DateTime, nullable=False, default=utcnow)
 
