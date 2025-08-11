@@ -1,4 +1,4 @@
-# from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.types import DateTime
 from datetime import datetime
 import pytz
@@ -80,26 +80,20 @@ class Submission(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     spotify_track_id = db.Column(db.String(100), nullable=False)
     cycle_date = db.Column(db.Date, nullable=False)
-    submitted_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    submitted_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     visible_to_others = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', backref='submissions')
     
-# Stores all like/neutral/dislike ratings on submissions
-class Feedback(db.Model):
+# Stores all likes/dislikes on submissions
+class SongFeedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    submission_id = db.Column(db.Integer, db.ForeignKey('submission.id'), nullable=False)
-    rater_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    feedback_value = db.Column(db.Enum('like', 'neutral', 'dislike', name='feedback_enum'), nullable=False)
-    submitted_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    song_id = db.Column(db.Integer, db.ForeignKey('submission.id'), nullable=False)
+    feedback = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-    submission = db.relationship('Submission', backref='feedback')
-    rater = db.relationship('User', backref='given_feedback')
-    
-    # uniqueness
-    __table_args__ = (
-        db.UniqueConstraint('submission_id', 'rater_id', name='unique_feedback'),
-    )
+    __table_args__ = (db.UniqueConstraint('user_id', 'song_id', name='unique_user_song_feedback'),)
 
 # Stores all user–user similarity scores (Drop Index)
 class VibeScore(db.Model):

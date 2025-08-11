@@ -1,23 +1,25 @@
-from flask import Flask, redirect, request, render_template, session, url_for, flash
-from models import db, User, SoundCircle, CircleMembership, Submission
+from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app
+from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback
 import spotipy
-# from spotipy import Spotify
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
 from datetime import datetime, date, time, timedelta
 from dotenv import load_dotenv
-# import secrets  # for join codes
 import random
 import string
 from flask_migrate import Migrate
-# from flask_sqlalchemy import SQLAlchemy
 import os
 import pytz
+# from spotipy import Spotify
+# import secrets  # for join codes
+# from flask_sqlalchemy import SQLAlchemy
 # from pytz import timezone
 
+tz_est = pytz.timezone('US/Eastern')
+tz_utc = pytz.UTC
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
 
-TESTING_MODE = False
+TESTING_MODE = True
 AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
 
 ### LOAD ENVIRONMENT VARIABLES ######################
@@ -34,34 +36,42 @@ migrate = Migrate(app, db)
 ### HELPER FUNCTIONS ######################
 # get a circle's next drop time, previous drop time, and second most previous droptime 
 def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime] | None:
-    eastern = pytz.timezone("US/Eastern")
-    now = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(eastern)
+    tz_est = pytz.timezone("US/Eastern")
+    tz_utc = pytz.UTC
     
+    # Always compute “now” in EST for calendar math
+    now_est = datetime.utcnow().replace(tzinfo=tz_utc).astimezone(tz_est)
+
     drop_time_obj = circle.drop_time.time()
 
-    def local_drop_datetime(base_date):
-        return eastern.localize(datetime.combine(base_date, drop_time_obj))
+    def local_drop_datetime_est(base_date):
+        # build timezone-aware EST datetime at the circle’s drop time
+        return tz_est.localize(datetime.combine(base_date, drop_time_obj))
 
     if circle.drop_frequency.lower() == "daily":
-        today_drop = local_drop_datetime(now.date()) # save today's droptime as datetime, whether today's droptime has passed or not 
-        
-        # save next drop 
-        if now < today_drop:
-            next_drop = today_drop
+        today_drop_est = local_drop_datetime_est(now_est.date())
+
+        if now_est < today_drop_est:
+            next_drop_est = today_drop_est
         else:
-            next_drop = today_drop + timedelta(days=1)
+            next_drop_est = today_drop_est + timedelta(days=1)
 
-        most_recent_drop = next_drop - timedelta(days=1) # save most recent drop 
-        second_most_recent_drop = next_drop - timedelta(days=2) # save second most recent drop 
-        return next_drop, most_recent_drop, second_most_recent_drop
+        most_recent_drop_est = next_drop_est - timedelta(days=1)
+        second_most_recent_drop_est = next_drop_est - timedelta(days=2)
+        
+        # convert to UTC for internal use 
+        next_drop_utc = next_drop_est.astimezone(tz_utc)
+        most_recent_drop_utc = most_recent_drop_est.astimezone(tz_utc)
+        second_most_recent_utc = second_most_recent_drop_est.astimezone(tz_utc)
 
-    # Map weekday names to numbers
-    day_map = {
-        "Monday": 0, "Tuesday": 1, "Wednesday": 2,
-        "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
-    }
+        # return UTC for internal logic
+        return (
+            next_drop_est.astimezone(tz_utc),
+            most_recent_drop_est.astimezone(tz_utc),
+            second_most_recent_drop_est.astimezone(tz_utc),
+        )
 
-    drop_days = []
+    # weekly / biweekly
     if circle.drop_frequency.lower() == "weekly":
         drop_days = [circle.drop_day1]
     elif circle.drop_frequency.lower() == "biweekly":
@@ -69,25 +79,30 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
     else:
         return None
 
-    # Generate a list of drop datetimes for the last and next 14 days
-    drop_datetimes = []
+    # Generate drop datetimes around now (EST), then pick windows
+    day_names = {"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"}
+    drop_datetimes_est = []
     for i in range(-15, 9):
-        test_date = now.date() + timedelta(days=i)
-        if test_date.strftime("%A") in drop_days:
-            drop_datetimes.append(local_drop_datetime(test_date))
+        d = now_est.date() + timedelta(days=i)
+        if d.strftime("%A") in drop_days:
+            drop_datetimes_est.append(local_drop_datetime_est(d))
 
-    # Sort and get relevant windows
-    drop_datetimes = sorted(drop_datetimes)
-    for i, dt in enumerate(drop_datetimes):
-        if dt > now:
-            next_drop = dt
-            most_recent_drop = drop_datetimes[i - 1] if i - 1 >= 0 else None
-            second_most_recent_drop = drop_datetimes[i - 2] if i - 2 >= 0 else None
-            if most_recent_drop and second_most_recent_drop:
-                return next_drop, most_recent_drop, second_most_recent_drop
-            else:
-                return None
-    
+    drop_datetimes_est.sort()
+
+    for i, dt_est in enumerate(drop_datetimes_est):
+        if dt_est > now_est:
+            next_drop_est = dt_est
+            mr_est = drop_datetimes_est[i-1] if i-1 >= 0 else None
+            smr_est = drop_datetimes_est[i-2] if i-2 >= 0 else None
+            if mr_est and smr_est:
+                return (
+                    next_drop_est.astimezone(tz_utc),
+                    mr_est.astimezone(tz_utc),
+                    smr_est.astimezone(tz_utc),
+                )
+            return None
+
+    # no future window found (unlikely)
     print("[DEBUG] Unexpected: get_cycle_window() could not determine drop window.")
     return None
 
@@ -125,10 +140,8 @@ def home():
 def callback():
     code = request.args.get('code')
     print("Received code:", code) # debug line 
-    
     token_data = get_token(code)
     print("Token data:", token_data) # debug line
-    
     access_token = token_data.get('access_token')
     print("Access token:", access_token) # debug line
 
@@ -144,25 +157,38 @@ def callback():
     # make session permanent
     session.permanent = True
     
+#     session['user'] = {
+#         'id': user_data['id'],
+#         'display_name': user_data.get('display_name', 'Unknown'),
+#         'access_token': access_token,
+#         'refresh_token': token_data['refresh_token'],
+#         'expires_at': token_data['expires_at'],
+#     }
+
+#     # Check if user already exists in DB
+#     user = User.query.filter_by(spotify_id=user_data['id']).first()
+#     if user:
+#         # Update access token info and save
+#         user.access_token = access_token
+#         user.refresh_token = token_data.get('refresh_token')
+#         user.expires_at = token_data.get('expires_at')
+#         db.session.commit()
+#         return redirect(url_for('dashboard'))
+#     else:
+#         return redirect(url_for('register'))
+
+
+
+    # Store essential user info in session (avoid using 'id' to prevent confusion)
     session['user'] = {
-        'id': user_data['id'],
+        'spotify_id': user_data['id'],  # This is a string, e.g. '7xw4yczo4i8q0fjnd2ytyu5fd'
         'display_name': user_data.get('display_name', 'Unknown'),
         'access_token': access_token,
         'refresh_token': token_data['refresh_token'],
         'expires_at': token_data['expires_at'],
     }
 
-    # Check if user already exists in DB
-    user = User.query.filter_by(spotify_id=user_data['id']).first()
-    if user:
-        # Update access token info and save
-        user.access_token = access_token
-        user.refresh_token = token_data.get('refresh_token')
-        user.expires_at = token_data.get('expires_at')
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-    else:
-        return redirect(url_for('register'))
+    return redirect(url_for('dashboard'))
     
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -188,6 +214,11 @@ def register():
     
     return render_template('register.html')
 
+# welcome page
+@app.route('/welcome')
+def welcome():
+    return render_template('welcome.html')
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -200,11 +231,12 @@ def dashboard():
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
 
-    user = User.query.filter_by(spotify_id=session['user']['id']).first()
+    # user = User.query.filter_by(spotify_id=session['user']['id']).first()
+    user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
     sound_circles = [membership.circle for membership in user.circle_memberships]
 
     return render_template('dashboard.html',
-                           username=user.vibedrop_username,
+                           user=user,
                            drop_cred=5.0,
                            circles=sound_circles)
 
@@ -225,7 +257,7 @@ def create_circle():
         except ValueError:
             return "❌ Invalid time format. Please use 12-hour format (e.g., 3:00 PM).", 400
 
-        user = User.query.filter_by(spotify_id=session['user']['id']).first()
+        user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
 
         # Generate unique invite code (simple example)
         invite_code = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
@@ -263,7 +295,7 @@ def join_circle():
 
     if request.method == 'POST':
         code = request.form.get('circle_code')
-        user = User.query.filter_by(spotify_id=session['user']['id']).first()
+        user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
         circle = SoundCircle.query.filter_by(invite_code=code).first()
 
         if not circle:
@@ -287,6 +319,10 @@ def join_circle():
 def circle_dashboard(circle_id):    
     if 'user' not in session:
         return redirect(url_for('home'))
+    
+    spotify_id = session['user']['spotify_id']
+    user = User.query.filter_by(spotify_id=spotify_id).first()
+    user_id = user.id
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
 
@@ -319,9 +355,23 @@ def circle_dashboard(circle_id):
     all_submissions = Submission.query.filter_by(circle_id=circle.id).order_by(Submission.submitted_at.desc()).all()
     enriched_submissions = []
     previous_submissions = []
+    feedback_submission_ids = [] # to save submission IDs for feedback
     
+    tz_utc = pytz.UTC
     for sub in all_submissions:
-        if sub.submitted_at.replace(tzinfo=pytz.utc) <= second_most_recent_drop:
+        # ensure submission ts is tz-aware UTC
+        ts = sub.submitted_at
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=tz_utc)  # assuming stored as UTC-naive
+        else:
+            ts = ts.astimezone(tz_utc)
+            
+        ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
+        current_app.logger.info(
+            "Bucket check: ts=%s  recent=%s  next=%s", ts, most_recent_drop, next_drop
+        )
+        
+        if ts <= second_most_recent_drop:
             continue  # Skip songs older than 2 cycles
         
         try:
@@ -336,17 +386,39 @@ def circle_dashboard(circle_id):
         enriched = {
             'track_name': track_name,
             'track_artist': artist_name,
-            'submitted_at': sub.submitted_at
+            'submitted_at': ts,
+            'submission_id': sub.id,
+            'submitter_id': sub.user_id,
         }
-
-        if most_recent_drop <= sub.submitted_at.replace(tzinfo=pytz.utc) < next_drop:
+        
+        if most_recent_drop <= ts < next_drop:
             enriched_submissions.append(enriched)
-        elif second_most_recent_drop <= sub.submitted_at.replace(tzinfo=pytz.utc) < most_recent_drop:
+            current_app.logger.info("→ appended to CURRENT (submitted_vibes), submission_id=%s ts=%s",sub.id, ts)       ### DEBUG PRINTS FOR TIMEZONES ###
+        elif second_most_recent_drop <= ts < most_recent_drop:
             previous_submissions.append(enriched)
+            current_app.logger.info("→ appended to PREVIOUS (fresh_from_drop), submission_id=%s ts=%s",sub.id, ts)      ### DEBUG PRINTS FOR TIMEZONES ###
+            feedback_submission_ids.append(sub.id)
+        else:                                                                                                           ### DEBUG PRINTS FOR TIMEZONES ###
+            current_app.logger.info("→ skipped (older than 2 cycles), submission_id=%s ts=%s",sub.id, ts)               ### DEBUG PRINTS FOR TIMEZONES ###
+    
+    ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
+    current_app.logger.info("Summary: current=%d previous=%d",len(enriched_submissions), len(previous_submissions))
+    
+    # get feedback submission IDs for likes/dislikes
+    feedback_entries = SongFeedback.query.filter(
+        SongFeedback.user_id == user_id,
+        SongFeedback.song_id.in_(feedback_submission_ids)
+    ).all()
+
+    feedback_map = {entry.song_id: entry.feedback for entry in feedback_entries}
 
     # boolean for if to show submissions or not 
     show_submissions = TESTING_MODE
 
+    # After you've built previous_submissions and feedback_map
+    for item in previous_submissions:
+        item['user_feedback'] = feedback_map.get(item['submission_id'])
+    
     return render_template(
         'circle_dashboard.html',
         circle=circle,
@@ -356,7 +428,55 @@ def circle_dashboard(circle_id):
         previous_submissions=previous_submissions,
         testing_mode=TESTING_MODE, 
         submitted_user_ids=submitted_user_ids,
+        user_id=user_id,
     )
+
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    if 'user' not in session:
+        return redirect(url_for('home'))
+    
+    # Resolve DB user from Spotify ID in session
+    spotify_id = session['user'].get('spotify_id')
+    user = User.query.filter_by(spotify_id=spotify_id).first_or_404()
+    user_id = user.id
+    
+    # inputs 
+    song_id = request.form.get('song_id')
+    feedback_value = request.form.get('feedback')  # 'like' or 'dislike'
+
+    # Validate inputs
+    if not song_id or feedback_value not in ['like', 'dislike']:
+        flash("Invalid feedback submission.")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    submission = Submission.query.get(song_id)
+
+    # Safety: don’t allow rating own submission
+    if submission and submission.user_id == user_id and not TESTING_MODE:
+        flash("You cannot rate your own song.")
+        return redirect(request.referrer or url_for('circle_dashboard', circle_id=submission.circle_id))
+
+    # Check if feedback already exists
+    existing_feedback = SongFeedback.query.filter_by(
+        user_id=user_id, song_id=song_id
+    ).first()
+
+    if existing_feedback:
+        existing_feedback.feedback = feedback_value
+        existing_feedback.timestamp = datetime.utcnow()
+    else:
+        new_feedback = SongFeedback(
+            user_id=user_id,
+            song_id=song_id,
+            feedback=feedback_value,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(new_feedback)
+
+    db.session.commit()
+    flash("Feedback saved!")
+    return redirect(request.referrer or url_for('circle_dashboard', circle_id=submission.circle_id))
 
 @app.route('/circle/<int:circle_id>/submit', methods=['GET', 'POST'])
 def submit_song(circle_id):
@@ -366,7 +486,7 @@ def submit_song(circle_id):
     refresh_token_if_needed(session['user'])  # Refresh token if needed
 
     circle = SoundCircle.query.get_or_404(circle_id)
-    user = User.query.filter_by(spotify_id=session['user']['id']).first()
+    user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
 
     # Make sure user is a member of this circle
     if user not in circle.members:
@@ -389,6 +509,12 @@ def submit_song(circle_id):
         if not drop_window:
             return "⏳ Could not determine a valid drop window for this Sound Circle.", 400
         next_drop, most_recent_drop, _ = drop_window
+        
+        ### DEBUG PRINTS FOR TIMEZONES ###
+        app.logger.info(
+            "Submit: (UTC) now=%s most_recent=%s next=%s",
+            utcnow(), most_recent_drop, next_drop
+        )
 
         # Check if this user has already submitted for today's cycle
         if not TESTING_MODE:
@@ -411,6 +537,9 @@ def submit_song(circle_id):
         )
         db.session.add(new_submission)
         db.session.commit()
+        
+        ### DEBUG PRINTS FOR TIMEZONES ###
+        current_app.logger.info("Saved submitted_at (py): %s tz=%s", new_submission.submitted_at, new_submission.submitted_at.tzinfo)
 
         return redirect(url_for('circle_dashboard', circle_id=circle.id))
 
@@ -423,7 +552,7 @@ def create_playlist(circle_id):
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
 
-    user = User.query.filter_by(spotify_id=session['user']['id']).first()
+    user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
     circle = SoundCircle.query.get_or_404(circle_id)
 
     # Get drop window using new logic
@@ -490,8 +619,36 @@ def create_playlist(circle_id):
 def to_est_filter(dt_utc):
     if dt_utc is None:
         return ""
-    est = pytz.timezone('US/Eastern')
-    return dt_utc.astimezone(est).strftime('%b %d, %Y at %I:%M %p EST')
+    # est = pytz.timezone('US/Eastern')
+    # return dt_utc.astimezone(est).strftime('%b %d, %Y at %I:%M %p EST')
+    dt_utc = dt_utc.astimezone(tz_utc)
+    return dt_utc.astimezone(tz_est)  # <-- return datetime (not string)
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value, fmt="%b %d, %Y at %I:%M %p EST"):
+    if value is None:
+        return ""
+    return value.strftime(fmt)
+
+@app.route('/debug/drop_window/<int:circle_id>')
+def debug_drop_window(circle_id):
+    circle = SoundCircle.query.get_or_404(circle_id)
+    tz_eastern = pytz.timezone("US/Eastern")
+    tz_utc = pytz.UTC
+
+    now_utc = datetime.now(tz_utc)
+    now_est = now_utc.astimezone(tz_eastern)
+
+    next_drop, most_recent_drop, second_most_recent_drop = get_cycle_window(circle)
+
+    return (
+        f"Now UTC: {now_utc}\n"
+        f"Now EST: {now_est}\n"
+        f"Windows (as returned):\n"
+        f"  next_drop:             {next_drop} (tz={getattr(next_drop, 'tzinfo', None)})\n"
+        f"  most_recent_drop:      {most_recent_drop} (tz={getattr(most_recent_drop, 'tzinfo', None)})\n"
+        f"  second_most_recent:    {second_most_recent_drop} (tz={getattr(second_most_recent_drop, 'tzinfo', None)})\n"
+    ), 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 if __name__ == "__main__":
     with app.app_context():

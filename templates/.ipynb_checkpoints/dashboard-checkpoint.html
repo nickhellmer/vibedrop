@@ -147,6 +147,23 @@
                 margin-top: 20px;
             }
         }
+        
+        .nav-link-fixed {
+          position: absolute;
+          top: 28px;
+          right: 40px;
+        }
+
+        .nav-link-fixed a {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #BB86FC;
+          text-decoration: none;
+        }
+
+        .nav-link-fixed a:hover {
+          text-decoration: underline;
+        }
 
     </style>
 </head>
@@ -156,7 +173,13 @@
         <span class="d">D</span>
         <span class="v-right">V</span>
     </div>
-    <h1>🎧 Welcome, {{ vibedrop_username }}!</h1>
+
+    <div style="position: relative; height: 60px;">
+        <div class="nav-link-fixed">
+            <a href="{{ url_for('welcome') }}">Welcome / How It Works</a>
+        </div>
+    </div>
+    <h1>🎧 Welcome, {{ user.vibedrop_username }}!</h1>
     <p>Your Drop Cred: <strong>{{ drop_cred }}</strong></p>
 
     <h2>Your Sound Circles</h2>
