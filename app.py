@@ -9,6 +9,7 @@ import string
 from flask_migrate import Migrate
 import os
 import pytz
+from functools import wraps
 # from spotipy import Spotify
 # import secrets  # for join codes
 # from flask_sqlalchemy import SQLAlchemy
@@ -177,18 +178,58 @@ def callback():
 #     else:
 #         return redirect(url_for('register'))
 
-
+    # --- REPLACE everything from here down to the final redirect ---
+    spotify_id = user_data["id"]
+    display_name = user_data.get("display_name") or spotify_id
+    
+    # Robust expires_at (Spotify sometimes gives expires_in instead)
+    expires_at = token_data.get("expires_at")
+    if not isinstance(expires_at, datetime):
+        expires_at = datetime.utcnow() + timedelta(seconds=token_data.get("expires_in", 3600))
+    
+    # Get-or-create user
+    user = User.query.filter_by(spotify_id=spotify_id).first()
+    first_login = False
+    if not user:
+        first_login = True
+        user = User(
+            spotify_id=spotify_id,
+            vibedrop_username=spotify_id,   # temporary; user will pick a nice handle on /register
+            display_name=display_name,
+            access_token=access_token,
+            refresh_token=token_data.get("refresh_token"),
+            expires_at=expires_at,
+        )
+        db.session.add(user)
+    else:
+        user.access_token = access_token
+        if token_data.get("refresh_token"):
+            user.refresh_token = token_data["refresh_token"]
+        user.expires_at = expires_at
+    
+    db.session.commit()
+    
+    # Store only a stable key in session
+    session.clear()
+    session.permanent = True
+    session["user_id"] = user.id
+    
+    app.logger.info(f"OAuth login ok: user_id={user.id}, spotify_id={spotify_id}, first_login={first_login}")
 
     # Store essential user info in session (avoid using 'id' to prevent confusion)
+    # Include BOTH 'spotify_id' and 'id' because other routes use both.
     session['user'] = {
-        'spotify_id': user_data['id'],  # This is a string, e.g. '7xw4yczo4i8q0fjnd2ytyu5fd'
-        'display_name': user_data.get('display_name', 'Unknown'),
+        'spotify_id': spotify_id,
+        'id': spotify_id,  # keep for routes that expect session['user']['id']
+        'display_name': display_name,
         'access_token': access_token,
-        'refresh_token': token_data['refresh_token'],
-        'expires_at': token_data['expires_at'],
+        'refresh_token': token_data.get('refresh_token'),
+        'expires_at': int(expires_at.timestamp()), # or expires_at.isoformat() - previously was just expires_at
     }
-
-    return redirect(url_for('dashboard'))
+    
+    # First-time → username page; returning → dashboard
+    return redirect(url_for('register') if first_login else url_for('dashboard'))
+    # --- END REPLACE ---
     
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -201,16 +242,25 @@ def register():
         if User.query.filter_by(vibedrop_username=username).first():
             return "❌ Username already taken. Please go back and choose another.", 400
 
-        # Create new user and save to DB
-        new_user = User(
-            spotify_id=spotify_id,
-            vibedrop_username=username,
-            access_token=access_token
-        )
-        db.session.add(new_user)
+        # # Create new user and save to DB
+        # new_user = User(
+        #     spotify_id=spotify_id,
+        #     vibedrop_username=username,
+        #     access_token=access_token
+        # )
+        # db.session.add(new_user)
+        # db.session.commit()
+
+        user = User.query.filter_by(spotify_id=spotify_id).first()
+        if not user:
+            return "❌ Session error. Please log in again.", 400
+        
+        user.vibedrop_username = username
+        # optional: refresh access_token from session (already set in callback)
+        user.access_token = access_token or user.access_token
         db.session.commit()
 
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('welcome'))
     
     return render_template('register.html')
 
@@ -231,8 +281,10 @@ def dashboard():
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
 
-    # user = User.query.filter_by(spotify_id=session['user']['id']).first()
     user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
+    if not user:
+        return redirect(url_for('register'))
+            
     sound_circles = [membership.circle for membership in user.circle_memberships]
 
     return render_template('dashboard.html',
