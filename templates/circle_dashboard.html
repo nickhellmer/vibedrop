@@ -224,6 +224,23 @@
       width: 90px;
       white-space: nowrap;
     }
+
+    .nav-link-fixed {
+      position: absolute;
+      top: 28px;
+      right: 40px;
+    }
+    
+    .nav-link-fixed a {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #BB86FC;
+      text-decoration: none;
+    }
+    
+    .nav-link-fixed a:hover {
+      text-decoration: underline;
+    }
       
   </style>
 </head>
@@ -242,6 +259,12 @@
         <span class="v-left">V</span>
         <span class="d">D</span>
         <span class="v-right">V</span>
+    </div>
+
+    <div style="position: relative; height: 60px;">
+        <div class="nav-link-fixed">
+            <a href="{{ url_for('welcome') }}">Welcome / How It Works</a>
+        </div>
     </div>
 
     <h1>🎶 {{ circle.circle_name }}</h1>
