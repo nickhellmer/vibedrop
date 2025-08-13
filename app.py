@@ -21,7 +21,7 @@ tz_utc = pytz.UTC
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
 
-TESTING_MODE = True
+TESTING_MODE = False
 AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
 
 ### LOAD ENVIRONMENT VARIABLES ######################

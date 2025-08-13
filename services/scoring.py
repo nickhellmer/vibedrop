@@ -5,7 +5,7 @@ from models import db, Submission, SongFeedback, CircleMembership, DropCred
 
 LIKE_VALUE = "like"
 DISLIKE_VALUE = "dislike"
-TESTING_MODE = True  # Switch for local single-user testing
+TESTING_MODE = False  # Switch for local single-user testing
 
 def _likes_and_dislikes_for_user(user_id: int) -> tuple[int, int]:
     """
