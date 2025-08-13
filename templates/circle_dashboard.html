@@ -237,6 +237,12 @@
       color: #BB86FC;
       text-decoration: none;
     }
+
+    .nav-link-fixed .divider {
+      display: inline-block;
+      margin: 0 10px;
+      color: #888;
+    }
     
     .nav-link-fixed a:hover {
       text-decoration: underline;
@@ -263,7 +269,9 @@
 
     <div style="position: relative; height: 60px;">
         <div class="nav-link-fixed">
-            <a href="{{ url_for('welcome') }}">Welcome / How It Works</a>
+          <a href="{{ url_for('welcome') }}">Welcome / How It Works</a>
+          <span class="divider">•</span>
+          <a href="{{ url_for('all_users') }}">All Users</a>
         </div>
     </div>
 
@@ -372,8 +380,8 @@
     
     
     
-  <br><br>
-  <a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
+    <br><br>
+    <a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
     
     <br><br>
     {% if testing_mode %}
