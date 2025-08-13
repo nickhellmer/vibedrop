@@ -46,7 +46,9 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
     # Always compute “now” in EST for calendar math
     now_est = datetime.utcnow().replace(tzinfo=tz_utc).astimezone(tz_est)
 
-    drop_time_obj = circle.drop_time.time()
+    # Convert drop_time from UTC → EST (preserving intended hour like 1pm)
+    drop_time_est = circle.drop_time.astimezone(tz_est)
+    drop_time_obj = drop_time_est.time()
 
     def local_drop_datetime_est(base_date):
         # build timezone-aware EST datetime at the circle’s drop time
@@ -383,7 +385,7 @@ def circle_dashboard(circle_id):
     # Get circle and members
     circle = SoundCircle.query.get_or_404(circle_id)
     members = circle.members
-    print("circle drop time right before window calculation:", circle.drop_time)
+    print("[DEBUG] circle drop time right before window calculation:", circle.drop_time)
     
     # Get drop window (next_drop, most_recent_drop, second_most_recent_drop)
     drop_window = get_cycle_window(circle)
@@ -404,7 +406,6 @@ def circle_dashboard(circle_id):
     if 'access_token' not in session['user']:
         return redirect(url_for('home'))
     sp = spotipy.Spotify(auth=session['user']['access_token'])
-    print("Access token in session:", session['user']['access_token'])
     
     # Categorize submissions
     all_submissions = Submission.query.filter_by(circle_id=circle.id).order_by(Submission.submitted_at.desc()).all()
@@ -420,11 +421,6 @@ def circle_dashboard(circle_id):
             ts = ts.replace(tzinfo=tz_utc)  # assuming stored as UTC-naive
         else:
             ts = ts.astimezone(tz_utc)
-            
-        ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
-        current_app.logger.info(
-            "Bucket check: ts=%s  recent=%s  next=%s", ts, most_recent_drop, next_drop
-        )
         
         if ts <= second_most_recent_drop:
             continue  # Skip songs older than 2 cycles
@@ -446,16 +442,14 @@ def circle_dashboard(circle_id):
             'submitter_id': sub.user_id,
         }
 
-        print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop) 
+        print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop)                ### DEBUG PRINTS FOR TIMEZONES ###
         if most_recent_drop <= ts < next_drop:
             enriched_submissions.append(enriched)
-            current_app.logger.info("→ appended to CURRENT (submitted_vibes), submission_id=%s ts=%s",sub.id, ts)       ### DEBUG PRINTS FOR TIMEZONES ###
         elif second_most_recent_drop <= ts < most_recent_drop:
             previous_submissions.append(enriched)
-            current_app.logger.info("→ appended to PREVIOUS (fresh_from_drop), submission_id=%s ts=%s",sub.id, ts)      ### DEBUG PRINTS FOR TIMEZONES ###
             feedback_submission_ids.append(sub.id)
         else:                                                                                                           ### DEBUG PRINTS FOR TIMEZONES ###
-            current_app.logger.info("→ skipped (older than 2 cycles), submission_id=%s ts=%s",sub.id, ts)               ### DEBUG PRINTS FOR TIMEZONES ###
+            current_app.logger.info("→ skipped (older than 2 cycles), submission_id=%s ts=%s",sub.id, ts)
     
     ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
     current_app.logger.info("Summary: current=%d previous=%d",len(enriched_submissions), len(previous_submissions))
