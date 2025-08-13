@@ -445,7 +445,8 @@ def circle_dashboard(circle_id):
             'submission_id': sub.id,
             'submitter_id': sub.user_id,
         }
-        
+
+        print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop) 
         if most_recent_drop <= ts < next_drop:
             enriched_submissions.append(enriched)
             current_app.logger.info("→ appended to CURRENT (submitted_vibes), submission_id=%s ts=%s",sub.id, ts)       ### DEBUG PRINTS FOR TIMEZONES ###
