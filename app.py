@@ -820,6 +820,30 @@ def dev_wipe_self():
     session.clear()
     return "✅ Deleted your account and all related data (DEV only).", 200
 
+# change username 
+@app.route('/change_username', methods=['POST'])
+def change_username():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    new_username = request.form['new_username'].strip()
+
+    # Check if username is already taken
+    if User.query.filter_by(vibedrop_username=new_username).first():
+        flash('Username already taken. Please choose another one.')
+        return redirect(url_for('dashboard'))
+
+    # Update username
+    user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
+    user.vibedrop_username = new_username
+    db.session.commit()
+
+    # Update session info
+    session['user']['vibedrop_username'] = new_username
+
+    flash('Username updated successfully!')
+    return redirect(url_for('dashboard'))
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
