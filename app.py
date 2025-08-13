@@ -11,6 +11,8 @@ from flask_migrate import Migrate
 import os
 import pytz
 from functools import wraps
+from sqlalchemy import func, case
+from services.scoring import compute_drop_cred
 # from spotipy import Spotify
 # import secrets  # for join codes
 # from flask_sqlalchemy import SQLAlchemy
@@ -678,6 +680,68 @@ def create_playlist(circle_id):
         # flash("❌ Failed to create playlist. Try logging out and back in.")
         # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return "❌ Failed to create playlist. Try logging out and back in.", 500
+
+# route to the all users page 
+@app.route('/all-users', methods=['GET'])
+def all_users():
+    # Submissions per user
+    submissions_q = (
+        db.session.query(
+            Submission.user_id.label('u_id'),
+            func.count(Submission.id).label('submission_count')
+        )
+        .group_by(Submission.user_id)
+        .subquery()
+    )
+
+    # Feedback given per user (likes/dislikes)
+    feedback_q = (
+        db.session.query(
+            SongFeedback.user_id.label('u_id'),
+            func.sum(case((SongFeedback.feedback == 'like', 1), else_=0)).label('likes_given'),
+            func.sum(case((SongFeedback.feedback == 'dislike', 1), else_=0)).label('dislikes_given'),
+        )
+        .group_by(SongFeedback.user_id)
+        .subquery()
+    )
+
+    # Base rows (we'll compute drop cred per user to match dashboard behavior)
+    rows = (
+        db.session.query(
+            User.id,
+            User.vibedrop_username,
+            User.created_at,
+            func.coalesce(submissions_q.c.submission_count, 0).label('submission_count'),
+            func.coalesce(feedback_q.c.likes_given, 0).label('likes_given'),
+            func.coalesce(feedback_q.c.dislikes_given, 0).label('dislikes_given'),
+        )
+        .outerjoin(submissions_q, submissions_q.c.u_id == User.id)
+        .outerjoin(feedback_q, feedback_q.c.u_id == User.id)
+        .all()
+    )
+
+    # Compute Drop Cred exactly like the dashboard
+    users_stats = []
+    for r in rows:
+        try:
+            dc = compute_drop_cred(r.id)  # same function your dashboard uses
+            score = round(float(dc["drop_cred_score"]), 1)
+        except Exception:
+            score = 0.0  # safe fallback if anything odd happens
+
+        users_stats.append({
+            "vibedrop_username": r.vibedrop_username,
+            "created_at": r.created_at,
+            "drop_cred": score,
+            "submission_count": r.submission_count or 0,
+            "likes_given": r.likes_given or 0,
+            "dislikes_given": r.dislikes_given or 0,
+        })
+
+    # Default sort: Drop Cred desc (tie-break by username)
+    users_stats.sort(key=lambda x: (x["drop_cred"], x["vibedrop_username"].lower()), reverse=True)
+
+    return render_template('all_users.html', users_stats=users_stats)
     
 # timezone display filter helper
 @app.template_filter('to_est')
