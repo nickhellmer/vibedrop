@@ -51,7 +51,7 @@ class SoundCircle(db.Model):
     drop_frequency = db.Column(db.String(20), nullable=False)
     drop_day1 = db.Column(db.String(20), nullable=True)
     drop_day2 = db.Column(db.String(20), nullable=True)
-    drop_time = db.Column(DateTime, nullable=False)
+    drop_time = db.Column(DateTime(timezone=True), nullable=False) 
     invite_code = db.Column(db.String(10), unique=True)
     creator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
