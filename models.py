@@ -4,6 +4,7 @@ from datetime import datetime
 import pytz
 # new imports 
 from sqlalchemy import MetaData
+from sqlalchemy.dialects.postgresql import JSONB
 
 ### stable constraint naming ###
 convention = {
@@ -127,6 +128,38 @@ class VibeScore(db.Model):
 
     user1 = db.relationship('User', foreign_keys=[user1_id], backref='vibe_scores_given')
     user2 = db.relationship('User', foreign_keys=[user2_id], backref='vibe_scores_received')
+
+# stores all users' drop scores 
+class DropCred(db.Model):
+    __tablename__ = "drop_creds"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+
+    # Raw counts used for the score at computation time
+    total_likes = db.Column(db.Integer, nullable=False)
+    total_dislikes = db.Column(db.Integer, nullable=False)
+    total_possible = db.Column(db.Integer, nullable=False)
+
+    # Score on the 1–10 scale (phase 1 MVP)
+    drop_cred_score = db.Column(db.Float, nullable=False)
+
+    computed_at = db.Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    # Versioning + parameters used to compute the score (for Phase 2/3 evolution)
+    score_version = db.Column(db.SmallInteger, nullable=False, default=1)  # 1 = MVP
+    params = db.Column(JSONB, nullable=True)
+
+    # Optional explicit window if you snapshot rolling periods (kept nullable for MVP)
+    window_label = db.Column(db.String(32), nullable=True)  # e.g., "lifetime", "90d", "cycle_2025wk33"
+    window_start = db.Column(DateTime(timezone=True), nullable=True)
+    window_end = db.Column(DateTime(timezone=True), nullable=True)
+
+    user = db.relationship("User", backref=db.backref("drop_cred_history", lazy="dynamic"))
+
+    __table_args__ = (
+        db.Index("ix_drop_creds_user_computed_at", "user_id", "computed_at"),
+    )
     
     
     

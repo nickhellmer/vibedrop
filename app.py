@@ -1,5 +1,6 @@
 from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app
-from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback
+from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback, VibeScore, DropCred
+from services.scoring import compute_drop_cred
 import spotipy
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
 from datetime import datetime, date, time, timedelta
@@ -20,7 +21,7 @@ tz_utc = pytz.UTC
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
 
-TESTING_MODE = False
+TESTING_MODE = True
 AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
 
 ### LOAD ENVIRONMENT VARIABLES ######################
@@ -287,10 +288,17 @@ def dashboard():
             
     sound_circles = [membership.circle for membership in user.circle_memberships]
 
+    # compute Drop Cred for the logged-in user
+    dc = compute_drop_cred(user.id)  # assumes Flask-Login's current_user
+
     return render_template('dashboard.html',
-                           user=user,
-                           drop_cred=5.0,
-                           circles=sound_circles)
+                            user=user,
+                            circles=sound_circles, 
+                            drop_cred=dc["drop_cred_score"],
+                            drop_cred_likes=dc["total_likes"],
+                            drop_cred_dislikes=dc["total_dislikes"],
+                            drop_cred_possible=dc["total_possible"],
+                          )
 
 @app.route('/create-circle', methods=['GET', 'POST'])
 def create_circle():
@@ -300,6 +308,8 @@ def create_circle():
         drop_day1 = request.form.get('drop_day1')
         drop_day2 = request.form.get('drop_day2')
         drop_time_str = request.form.get('drop_time')
+
+        print("drop_time_str when selected",drop_time_str)
         
         # Convert to EST datetime (only the time matters, date is arbitrary)
         try:
@@ -314,6 +324,7 @@ def create_circle():
         # Generate unique invite code (simple example)
         invite_code = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
 
+        print("drop_time when saved:",drop_time)
         new_circle = SoundCircle(
             circle_name=circle_name,
             drop_frequency=drop_frequency,
@@ -381,6 +392,7 @@ def circle_dashboard(circle_id):
     # Get circle and members
     circle = SoundCircle.query.get_or_404(circle_id)
     members = circle.members
+    print("circle drop time right before window calculation:", circle.drop_time)
     
     # Get drop window (next_drop, most_recent_drop, second_most_recent_drop)
     drop_window = get_cycle_window(circle)
@@ -608,6 +620,7 @@ def create_playlist(circle_id):
     circle = SoundCircle.query.get_or_404(circle_id)
 
     # Get drop window using new logic
+    print("circle drop time right before window calculation:", circle.drop_time)
     drop_window = get_cycle_window(circle)
     if not drop_window:
         return "⚠️ Could not determine drop cycle.", 400
@@ -701,6 +714,57 @@ def debug_drop_window(circle_id):
         f"  most_recent_drop:      {most_recent_drop} (tz={getattr(most_recent_drop, 'tzinfo', None)})\n"
         f"  second_most_recent:    {second_most_recent_drop} (tz={getattr(second_most_recent_drop, 'tzinfo', None)})\n"
     ), 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+
+@app.route('/dev/wipe_self', methods=['GET', 'POST'])
+def dev_wipe_self():
+    if not app.debug:
+        return "❌ Disabled outside DEBUG.", 403
+
+    if request.method == 'GET':
+        # simple form so the browser sends your session cookie on POST
+        return """
+        <form method="post">
+          <button type="submit">Wipe my account (DEV)</button>
+        </form>
+        """, 200
+
+    # POST: same deletion logic as before
+    uid = session.get('user_id')
+    user = db.session.get(User, uid) if uid else None
+    if not user and 'user' in session:
+        spid = session['user'].get('spotify_id') or session['user'].get('id')
+        if spid:
+            user = User.query.filter_by(spotify_id=spid).first()
+    if not user:
+        return "❌ No logged-in user found in session.", 400
+
+    # --- deletion logic (same as before) ---
+    user_id = user.id
+    circles = SoundCircle.query.filter_by(creator_id=user_id).all()
+    circle_ids = [c.id for c in circles]
+    if circle_ids:
+        CircleMembership.query.filter(CircleMembership.circle_id.in_(circle_ids)).delete(synchronize_session=False)
+        sub_ids = [sid for (sid,) in Submission.query.with_entities(Submission.id).filter(
+            Submission.circle_id.in_(circle_ids)
+        ).all()]
+        if sub_ids:
+            SongFeedback.query.filter(SongFeedback.song_id.in_(sub_ids)).delete(synchronize_session=False)
+        for c in circles:
+            db.session.delete(c)
+
+    CircleMembership.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    my_sub_ids = [sid for (sid,) in Submission.query.with_entities(Submission.id).filter_by(user_id=user_id).all()]
+    if my_sub_ids:
+        SongFeedback.query.filter(SongFeedback.song_id.in_(my_sub_ids)).delete(synchronize_session=False)
+        Submission.query.filter(Submission.id.in_(my_sub_ids)).delete(synchronize_session=False)
+    SongFeedback.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    VibeScore.query.filter((VibeScore.user1_id == user_id) | (VibeScore.user2_id == user_id)).delete(synchronize_session=False)
+
+    db.session.delete(user)
+    db.session.commit()
+    session.clear()
+    return "✅ Deleted your account and all related data (DEV only).", 200
 
 if __name__ == "__main__":
     with app.app_context():
