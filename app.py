@@ -110,17 +110,6 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
     print("[DEBUG] Unexpected: get_cycle_window() could not determine drop window.")
     return None
 
-
-# # helper function to get the current cycle's date
-# def get_current_cycle_date(circle: SoundCircle) -> date | None:
-
-# # helper function to get circle deadline 
-# def has_deadline_passed(circle):
-
-# # helper to get circle's most previous set of data #
-# def get_previous_cycle_date(circle: SoundCircle) -> date | None:
-
-
 ### ALL ROUTES ######################
 
 @app.route("/ping")
