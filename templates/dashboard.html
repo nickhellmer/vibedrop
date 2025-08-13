@@ -234,10 +234,20 @@
         <button type="submit">🔗 Join Sound Circle</button>
     </form>
 
-    <form action="{{ url_for('change_username') }}" method="POST">
-      <label for="new_username">Change your VibeDrop username:</label><br>
-      <input type="text" id="new_username" name="new_username" required>
-      <button type="submit">Update Username</button>
-    </form>
+    <a href="{{ url_for('account_settings') }}">
+      <button style="
+        background-color: #7B4EFF;
+        color: white;
+        padding: 10px 16px;
+        font-size: 1rem;
+        font-family: 'Space Grotesk', sans-serif;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 20px;
+      ">
+        Account Settings
+      </button>
+    </a>
 </body>
 </html>

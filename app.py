@@ -814,31 +814,60 @@ def dev_wipe_self():
     session.clear()
     return "✅ Deleted your account and all related data (DEV only).", 200
 
-# change username 
-@app.route('/change_username', methods=['POST'])
-def change_username():
+# account settings (including change username functionality)
+@app.route('/account-settings', methods=['GET', 'POST'])
+def account_settings():
     if 'user' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('home'))
 
-    new_username = request.form['new_username'].strip()
-
-    # Check if username is already taken
-    if User.query.filter_by(vibedrop_username=new_username).first():
-        flash('Username already taken. Please choose another one.')
-        return redirect(url_for('dashboard'))
-
-    # Update username
     user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
-    user.vibedrop_username = new_username
-    db.session.commit()
 
-    # Update session info
-    session['user']['vibedrop_username'] = new_username
+    if request.method == 'POST':
+        # Username logic
+        new_username = request.form.get('new_username', '').strip()
+        if new_username and new_username != user.vibedrop_username:
+            if User.query.filter_by(vibedrop_username=new_username).first():
+                flash('Username already taken. Please choose another one.', 'danger')
+                return redirect(url_for('account_settings'))
+            user.vibedrop_username = new_username
+            session['user']['vibedrop_username'] = new_username
+            flash('Username updated successfully!', 'success')
 
-    flash('Username updated successfully!')
-    return redirect(url_for('dashboard'))
+        # Other fields
+        user.email = request.form.get('email')
+        user.notifications = 'notifications' in request.form
+
+        db.session.commit()
+        flash("Settings updated!", "success")
+        return redirect(url_for('account_settings'))
+
+    return render_template('account_settings.html', user=user)
+
+# leave circle route to be used on account settings page
+@app.route('/leave_circle', methods=['POST'])
+def leave_circle():
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    circle_id = request.form.get('circle_id')
+    user_id = User.query.filter_by(spotify_id=session['user']['spotify_id']).first().id
+
+    membership = CircleMembership.query.filter_by(user_id=user_id, circle_id=circle_id).first()
+    if membership:
+        db.session.delete(membership)
+        db.session.commit()
+        flash('You have left the circle.', 'info')
+
+    return redirect(url_for('account_settings'))
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(debug=True, host="0.0.0.0", port=5001)
+
+
+
+
+
+
+
