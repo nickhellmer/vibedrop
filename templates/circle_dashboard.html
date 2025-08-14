@@ -162,6 +162,14 @@
     a { font-size: 0.95rem; display: block; text-align: center; margin-top: 30px; }
     table th, table td { padding: 6px 0; }
 
+
+    form button {          /* 'submit a vibe' and 'create spotify playlist' buttons on mobile */
+        width: auto;
+        padding: 6px 14px;     /* less vertical + horizontal space */
+        font-size: 0.75rem;    /* slightly smaller text */
+        margin-top: 12px;
+    }
+
     button.icon-button {
       font-size: 0.6rem;
       padding: 3px 6px;        /* 👈 smaller horizontal padding */
@@ -175,20 +183,36 @@
     button.icon-button span.emoji {
         font-size: 0.9rem;
         display: inline-block;
-        transform-origin: center;
         line-height: 1;
     }
     
     td.actions-cell {
         width: 60px;
-        vertical-align: middle;  /* 👈 centers contents vertically */
+        vertical-align: middle;      /* 👈 centers contents vertically */
+        text-align: center;
     }
 
     td.actions-cell form {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 4px; /* optional: small space between like/dislike */
+        gap: 4px;                   /* optional: small space between like/dislike */
+    }
+
+    table td, table th {         /* 👈 mobile view tables */
+        font-size: 0.65rem;
+        word-break: break-word;     /* 👈 helps wrap long artist/song names */
+        padding: 2px 4px;           /* slightly more vertical + horizontal space */
+    }
+    
+    td.actions-cell {
+      width: 60px;                  /* 👈 smaller font size for Fresh From the Drop table */
+      vertical-align: middle;
+      text-align: center;
+    }
+    
+    td:last-child {
+      font-size: 0.55rem;           /* 👈 smaller size for Submitted On column only in Fresh From the Drop table */
     }
   }
 </style>

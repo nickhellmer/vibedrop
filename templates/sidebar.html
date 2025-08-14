@@ -13,18 +13,19 @@
 
 <!-- Sidebar -->
 <div id="sidebar" style="
-  position: fixed;
-  top: 0;
-  right: -250px;
-  height: 100%;
-  width: 250px;
-  background-color: #1e1e1e;
-  color: white;
-  box-shadow: -3px 0 6px rgba(0,0,0,0.3);
-  padding: 60px 20px;
-  transition: right 0.3s ease-in-out;
-  z-index: 9998;
-  overflow-x: hidden;
+    position: fixed;
+    top: 0;
+    right: -250px;
+    height: 100%;
+    width: 250px;
+    background-color: #1e1e1e;
+    color: white;
+    box-shadow: -3px 0 6px rgba(0,0,0,0.3);
+    padding: 60px 20px;
+    transition: right 0.3s ease-in-out;
+    z-index: 9998;
+    overflow-x: hidden;
+    display: none;
 ">
   <!-- Close Button -->
   <span id="closeBtn" onclick="closeSidebar()" style="
@@ -60,16 +61,23 @@
 
 <script>
   function openSidebar() {
-    document.getElementById('sidebar').style.right = '0';
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.display = 'block';
+    sidebar.style.right = '0';
     document.getElementById('hamburger').style.display = 'none';
     document.getElementById('closeBtn').style.display = 'block';
     document.getElementById('sidebarLinks').style.display = 'block';
   }
 
   function closeSidebar() {
-    document.getElementById('sidebar').style.right = '-250px';
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.right = '-250px';
     document.getElementById('hamburger').style.display = 'block';
     document.getElementById('closeBtn').style.display = 'none';
     document.getElementById('sidebarLinks').style.display = 'none';
+
+    setTimeout(() => {
+      sidebar.style.display = 'none';
+    }, 300); // matches sidebar transition duration
   }
 </script>
