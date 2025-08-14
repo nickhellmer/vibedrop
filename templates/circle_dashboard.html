@@ -161,6 +161,35 @@
     .monogram .d { top: 6px; left: 2px; }
     a { font-size: 0.95rem; display: block; text-align: center; margin-top: 30px; }
     table th, table td { padding: 6px 0; }
+
+    button.icon-button {
+      font-size: 0.6rem;
+      padding: 3px 6px;        /* 👈 smaller horizontal padding */
+      min-width: auto;         /* 👈 let the button shrink */
+      width: auto;             /* 👈 no full-width on mobile */
+      display: inline-flex;    /* 👈 ensures tight wrap */
+      align-items: center;     /* 👈 vertical centering */
+      justify-content: center; /* 👈 horizontal centering */
+    }
+    
+    button.icon-button span.emoji {
+        font-size: 0.9rem;
+        display: inline-block;
+        transform-origin: center;
+        line-height: 1;
+    }
+    
+    td.actions-cell {
+        width: 60px;
+        vertical-align: middle;  /* 👈 centers contents vertically */
+    }
+
+    td.actions-cell form {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px; /* optional: small space between like/dislike */
+    }
   }
 </style>
 
@@ -261,10 +290,14 @@
           {% if submission.submitter_id != user_id or testing_mode %}
             <form action="{{ url_for('submit_feedback') }}" method="POST" style="display:inline;">
               <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
-              <button type="submit" name="feedback" value="like"
-                class="icon-button {% if submission.user_feedback == 'like' %}active{% endif %}">👍</button>
-              <button type="submit" name="feedback" value="dislike"
-                class="icon-button {% if submission.user_feedback == 'dislike' %}active{% endif %}">👎</button>
+                <button type="submit" name="feedback" value="like"
+                  class="icon-button {% if submission.user_feedback == 'like' %}active{% endif %}">
+                  <span class="emoji">👍</span>
+                </button>
+                <button type="submit" name="feedback" value="dislike"
+                  class="icon-button {% if submission.user_feedback == 'dislike' %}active{% endif %}">
+                  <span class="emoji">👎</span>
+                </button>
             </form>
           {% else %}
             <span style="color:#888;">—</span>

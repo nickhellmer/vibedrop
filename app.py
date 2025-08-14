@@ -23,7 +23,7 @@ tz_utc = pytz.UTC
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
 
-TESTING_MODE = False
+TESTING_MODE = True
 AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
 
 ### LOAD ENVIRONMENT VARIABLES ######################
@@ -270,7 +270,7 @@ def logout():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user' not in session:
+    if 'user' not in session or 'spotify_id' not in session['user']:
         return redirect(url_for('home'))
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
