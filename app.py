@@ -13,7 +13,7 @@ import pytz
 from functools import wraps
 from sqlalchemy import func, case
 from services.scoring import compute_drop_cred
-from services.sms import send_sms # sms reminders 
+from utils.sms import send_sms # sms reminders 
 # from spotipy import Spotify
 # import secrets  # for join codes
 # from flask_sqlalchemy import SQLAlchemy
