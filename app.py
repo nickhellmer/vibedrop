@@ -838,9 +838,9 @@ def account_settings():
         user.email = request.form.get('email')
         user.notifications = 'notifications' in request.form
 
-        # ✅ NEW: SMS settings
-        user.phone_number = request.form.get('phone_number')
-        user.sms_notifications = 'sms_notifications' in request.form
+        # # ✅ NEW: SMS settings
+        # user.phone_number = request.form.get('phone_number')
+        # user.sms_notifications = 'sms_notifications' in request.form
 
         db.session.commit()
         flash("Settings updated!", "success")
@@ -865,15 +865,15 @@ def leave_circle():
 
     return redirect(url_for('account_settings'))
 
-# send scheduled text reminders
-@app.route('/send-sms-test')
-def send_sms_test():
-    users = User.query.filter_by(sms_notifications=True).all()
-    for user in users:
-        if user.phone_number:
-            send_sms(user.phone_number, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
+# # send scheduled text reminders
+# @app.route('/send-sms-test')
+# def send_sms_test():
+#     users = User.query.filter_by(sms_notifications=True).all()
+#     for user in users:
+#         if user.phone_number:
+#             send_sms(user.phone_number, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
 
-    return "✅ SMS reminders sent!"
+#     return "✅ SMS reminders sent!"
 
 if __name__ == "__main__":
     with app.app_context():
