@@ -875,6 +875,13 @@ def send_sms_test():
 
     return "✅ SMS reminders sent!"
 
+
+@app.route('/enable-sms-for-all')
+def enable_sms_for_all():
+    User.query.update({User.sms_notifications: True})
+    db.session.commit()
+    return "All users updated ✅"
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
