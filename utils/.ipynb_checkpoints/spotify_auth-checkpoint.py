@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from flask import session
 
 # Load env variables from .env
 load_dotenv()
@@ -63,11 +64,17 @@ def get_user_profile(access_token):
     return response.json()
 
 def refresh_token_if_needed(session_user):
-    expires_at = session_user['expires_at']
+    expires_at = session_user.get('expires_at')
     
     # Convert to UNIX timestamp if it's a datetime object
     if isinstance(expires_at, datetime):
         expires_at = int(expires_at.timestamp())
+
+    # Skip refresh if still valid
+    now = int(datetime.utcnow().timestamp())
+    if now < expires_at:
+        return
+    print("⚠️ Token expired — refreshing...")
     
     token_info = {
         'access_token': session_user['access_token'],
@@ -82,7 +89,9 @@ def refresh_token_if_needed(session_user):
         scope=SCOPE
     )
 
-    if sp_oauth.is_token_expired(token_info):
-        refreshed = sp_oauth.refresh_access_token(token_info['refresh_token'])
-        session_user['access_token'] = refreshed['access_token']
-        session_user['expires_at'] = refreshed['expires_at']
+    refreshed = sp_oauth.refresh_access_token(token_info['refresh_token'])
+    session['user']['access_token'] = refreshed['access_token']
+    session['user']['expires_at'] = refreshed['expires_at']
+    session.modified = True
+
+    print("[DEBUG] Access token refreshed! New token:", refreshed['access_token'])

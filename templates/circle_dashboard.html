@@ -217,16 +217,6 @@
   }
 </style>
 
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class="flashes">
-      {% for message in messages %}
-        <li>{{ message }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-{% endwith %}
-
 <div class="monogram">
   <span class="v-left">V</span>
   <span class="d">D</span>

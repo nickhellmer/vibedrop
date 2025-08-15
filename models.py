@@ -162,3 +162,11 @@ class DropCred(db.Model):
     __table_args__ = (
         db.Index("ix_drop_creds_user_computed_at", "user_id", "computed_at"),
     )
+
+# feedback table
+class Feedback(db.Model):
+    __tablename__ = 'feedback'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)

@@ -1,5 +1,6 @@
 from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app
-from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback
+from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback, VibeScore, DropCred, Feedback
+from services.scoring import compute_drop_cred
 import spotipy
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
 from datetime import datetime, date, time, timedelta
@@ -9,6 +10,10 @@ import string
 from flask_migrate import Migrate
 import os
 import pytz
+from functools import wraps
+from sqlalchemy import func, case
+from services.scoring import compute_drop_cred
+from utils.sms import send_email # sms reminders 
 # from spotipy import Spotify
 # import secrets  # for join codes
 # from flask_sqlalchemy import SQLAlchemy
@@ -19,7 +24,7 @@ tz_utc = pytz.UTC
 def utcnow():
     return datetime.utcnow().replace(tzinfo=pytz.utc)
 
-TESTING_MODE = True
+TESTING_MODE = False
 AUTO_PUSH_TO_PREVIOUS = False # songs added immediately go to previous cycle 
 
 ### LOAD ENVIRONMENT VARIABLES ######################
@@ -42,7 +47,9 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
     # Always compute “now” in EST for calendar math
     now_est = datetime.utcnow().replace(tzinfo=tz_utc).astimezone(tz_est)
 
-    drop_time_obj = circle.drop_time.time()
+    # Convert drop_time from UTC → EST (preserving intended hour like 1pm)
+    drop_time_est = circle.drop_time.astimezone(tz_est)
+    drop_time_obj = drop_time_est.time()
 
     def local_drop_datetime_est(base_date):
         # build timezone-aware EST datetime at the circle’s drop time
@@ -106,17 +113,6 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
     print("[DEBUG] Unexpected: get_cycle_window() could not determine drop window.")
     return None
 
-
-# # helper function to get the current cycle's date
-# def get_current_cycle_date(circle: SoundCircle) -> date | None:
-
-# # helper function to get circle deadline 
-# def has_deadline_passed(circle):
-
-# # helper to get circle's most previous set of data #
-# def get_previous_cycle_date(circle: SoundCircle) -> date | None:
-
-
 ### ALL ROUTES ######################
 
 @app.route("/ping")
@@ -177,18 +173,58 @@ def callback():
 #     else:
 #         return redirect(url_for('register'))
 
-
+    # --- REPLACE everything from here down to the final redirect ---
+    spotify_id = user_data["id"]
+    display_name = user_data.get("display_name") or spotify_id
+    
+    # Robust expires_at (Spotify sometimes gives expires_in instead)
+    expires_at = token_data.get("expires_at")
+    if not isinstance(expires_at, datetime):
+        expires_at = datetime.utcnow() + timedelta(seconds=token_data.get("expires_in", 3600))
+    
+    # Get-or-create user
+    user = User.query.filter_by(spotify_id=spotify_id).first()
+    first_login = False
+    if not user:
+        first_login = True
+        user = User(
+            spotify_id=spotify_id,
+            vibedrop_username=spotify_id,   # temporary; user will pick a nice handle on /register
+            display_name=display_name,
+            access_token=access_token,
+            refresh_token=token_data.get("refresh_token"),
+            expires_at=expires_at,
+        )
+        db.session.add(user)
+    else:
+        user.access_token = access_token
+        if token_data.get("refresh_token"):
+            user.refresh_token = token_data["refresh_token"]
+        user.expires_at = expires_at
+    
+    db.session.commit()
+    
+    # Store only a stable key in session
+    session.clear()
+    session.permanent = True
+    session["user_id"] = user.id
+    
+    app.logger.info(f"OAuth login ok: user_id={user.id}, spotify_id={spotify_id}, first_login={first_login}")
 
     # Store essential user info in session (avoid using 'id' to prevent confusion)
+    # Include BOTH 'spotify_id' and 'id' because other routes use both.
     session['user'] = {
-        'spotify_id': user_data['id'],  # This is a string, e.g. '7xw4yczo4i8q0fjnd2ytyu5fd'
-        'display_name': user_data.get('display_name', 'Unknown'),
+        'spotify_id': spotify_id,
+        'id': spotify_id,  # keep for routes that expect session['user']['id']
+        'display_name': display_name,
         'access_token': access_token,
-        'refresh_token': token_data['refresh_token'],
-        'expires_at': token_data['expires_at'],
+        'refresh_token': token_data.get('refresh_token'),
+        'expires_at': int(expires_at.timestamp()), # or expires_at.isoformat() - previously was just expires_at
     }
-
-    return redirect(url_for('dashboard'))
+    
+    # First-time → username page; returning → dashboard
+    return redirect(url_for('register') if first_login else url_for('dashboard'))
+    # --- END REPLACE ---
     
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -201,16 +237,25 @@ def register():
         if User.query.filter_by(vibedrop_username=username).first():
             return "❌ Username already taken. Please go back and choose another.", 400
 
-        # Create new user and save to DB
-        new_user = User(
-            spotify_id=spotify_id,
-            vibedrop_username=username,
-            access_token=access_token
-        )
-        db.session.add(new_user)
+        # # Create new user and save to DB
+        # new_user = User(
+        #     spotify_id=spotify_id,
+        #     vibedrop_username=username,
+        #     access_token=access_token
+        # )
+        # db.session.add(new_user)
+        # db.session.commit()
+
+        user = User.query.filter_by(spotify_id=spotify_id).first()
+        if not user:
+            return "❌ Session error. Please log in again.", 400
+        
+        user.vibedrop_username = username
+        # optional: refresh access_token from session (already set in callback)
+        user.access_token = access_token or user.access_token
         db.session.commit()
 
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('welcome'))
     
     return render_template('register.html')
 
@@ -226,19 +271,28 @@ def logout():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user' not in session:
+    if 'user' not in session or 'spotify_id' not in session['user']:
         return redirect(url_for('home'))
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
 
-    # user = User.query.filter_by(spotify_id=session['user']['id']).first()
     user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
+    if not user:
+        return redirect(url_for('register'))
+            
     sound_circles = [membership.circle for membership in user.circle_memberships]
 
+    # compute Drop Cred for the logged-in user
+    dc = compute_drop_cred(user.id)  # assumes Flask-Login's current_user
+
     return render_template('dashboard.html',
-                           user=user,
-                           drop_cred=5.0,
-                           circles=sound_circles)
+                            user=user,
+                            circles=sound_circles, 
+                            drop_cred=dc["drop_cred_score"],
+                            drop_cred_likes=dc["total_likes"],
+                            drop_cred_dislikes=dc["total_dislikes"],
+                            drop_cred_possible=dc["total_possible"],
+                          )
 
 @app.route('/create-circle', methods=['GET', 'POST'])
 def create_circle():
@@ -248,6 +302,8 @@ def create_circle():
         drop_day1 = request.form.get('drop_day1')
         drop_day2 = request.form.get('drop_day2')
         drop_time_str = request.form.get('drop_time')
+
+        print("drop_time_str when selected",drop_time_str)
         
         # Convert to EST datetime (only the time matters, date is arbitrary)
         try:
@@ -262,6 +318,7 @@ def create_circle():
         # Generate unique invite code (simple example)
         invite_code = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
 
+        print("drop_time when saved:",drop_time)
         new_circle = SoundCircle(
             circle_name=circle_name,
             drop_frequency=drop_frequency,
@@ -329,6 +386,7 @@ def circle_dashboard(circle_id):
     # Get circle and members
     circle = SoundCircle.query.get_or_404(circle_id)
     members = circle.members
+    print("[DEBUG] circle drop time right before window calculation:", circle.drop_time)
     
     # Get drop window (next_drop, most_recent_drop, second_most_recent_drop)
     drop_window = get_cycle_window(circle)
@@ -349,7 +407,6 @@ def circle_dashboard(circle_id):
     if 'access_token' not in session['user']:
         return redirect(url_for('home'))
     sp = spotipy.Spotify(auth=session['user']['access_token'])
-    print("Access token in session:", session['user']['access_token'])
     
     # Categorize submissions
     all_submissions = Submission.query.filter_by(circle_id=circle.id).order_by(Submission.submitted_at.desc()).all()
@@ -365,11 +422,6 @@ def circle_dashboard(circle_id):
             ts = ts.replace(tzinfo=tz_utc)  # assuming stored as UTC-naive
         else:
             ts = ts.astimezone(tz_utc)
-            
-        ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
-        current_app.logger.info(
-            "Bucket check: ts=%s  recent=%s  next=%s", ts, most_recent_drop, next_drop
-        )
         
         if ts <= second_most_recent_drop:
             continue  # Skip songs older than 2 cycles
@@ -390,16 +442,15 @@ def circle_dashboard(circle_id):
             'submission_id': sub.id,
             'submitter_id': sub.user_id,
         }
-        
+
+        print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop)                ### DEBUG PRINTS FOR TIMEZONES ###
         if most_recent_drop <= ts < next_drop:
             enriched_submissions.append(enriched)
-            current_app.logger.info("→ appended to CURRENT (submitted_vibes), submission_id=%s ts=%s",sub.id, ts)       ### DEBUG PRINTS FOR TIMEZONES ###
         elif second_most_recent_drop <= ts < most_recent_drop:
             previous_submissions.append(enriched)
-            current_app.logger.info("→ appended to PREVIOUS (fresh_from_drop), submission_id=%s ts=%s",sub.id, ts)      ### DEBUG PRINTS FOR TIMEZONES ###
             feedback_submission_ids.append(sub.id)
         else:                                                                                                           ### DEBUG PRINTS FOR TIMEZONES ###
-            current_app.logger.info("→ skipped (older than 2 cycles), submission_id=%s ts=%s",sub.id, ts)               ### DEBUG PRINTS FOR TIMEZONES ###
+            current_app.logger.info("→ skipped (older than 2 cycles), submission_id=%s ts=%s",sub.id, ts)
     
     ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
     current_app.logger.info("Summary: current=%d previous=%d",len(enriched_submissions), len(previous_submissions))
@@ -556,6 +607,7 @@ def create_playlist(circle_id):
     circle = SoundCircle.query.get_or_404(circle_id)
 
     # Get drop window using new logic
+    print("circle drop time right before window calculation:", circle.drop_time)
     drop_window = get_cycle_window(circle)
     if not drop_window:
         return "⚠️ Could not determine drop cycle.", 400
@@ -613,6 +665,68 @@ def create_playlist(circle_id):
         # flash("❌ Failed to create playlist. Try logging out and back in.")
         # return redirect(url_for('circle_dashboard', circle_id=circle.id))
         return "❌ Failed to create playlist. Try logging out and back in.", 500
+
+# route to the all users page 
+@app.route('/all-users', methods=['GET'])
+def all_users():
+    # Submissions per user
+    submissions_q = (
+        db.session.query(
+            Submission.user_id.label('u_id'),
+            func.count(Submission.id).label('submission_count')
+        )
+        .group_by(Submission.user_id)
+        .subquery()
+    )
+
+    # Feedback given per user (likes/dislikes)
+    feedback_q = (
+        db.session.query(
+            SongFeedback.user_id.label('u_id'),
+            func.sum(case((SongFeedback.feedback == 'like', 1), else_=0)).label('likes_given'),
+            func.sum(case((SongFeedback.feedback == 'dislike', 1), else_=0)).label('dislikes_given'),
+        )
+        .group_by(SongFeedback.user_id)
+        .subquery()
+    )
+
+    # Base rows (we'll compute drop cred per user to match dashboard behavior)
+    rows = (
+        db.session.query(
+            User.id,
+            User.vibedrop_username,
+            User.created_at,
+            func.coalesce(submissions_q.c.submission_count, 0).label('submission_count'),
+            func.coalesce(feedback_q.c.likes_given, 0).label('likes_given'),
+            func.coalesce(feedback_q.c.dislikes_given, 0).label('dislikes_given'),
+        )
+        .outerjoin(submissions_q, submissions_q.c.u_id == User.id)
+        .outerjoin(feedback_q, feedback_q.c.u_id == User.id)
+        .all()
+    )
+
+    # Compute Drop Cred exactly like the dashboard
+    users_stats = []
+    for r in rows:
+        try:
+            dc = compute_drop_cred(r.id)  # same function your dashboard uses
+            score = round(float(dc["drop_cred_score"]), 1)
+        except Exception:
+            score = 0.0  # safe fallback if anything odd happens
+
+        users_stats.append({
+            "vibedrop_username": r.vibedrop_username,
+            "created_at": r.created_at,
+            "drop_cred": score,
+            "submission_count": r.submission_count or 0,
+            "likes_given": r.likes_given or 0,
+            "dislikes_given": r.dislikes_given or 0,
+        })
+
+    # Default sort: Drop Cred desc (tie-break by username)
+    users_stats.sort(key=lambda x: (x["drop_cred"], x["vibedrop_username"].lower()), reverse=True)
+
+    return render_template('all_users.html', users_stats=users_stats)
     
 # timezone display filter helper
 @app.template_filter('to_est')
@@ -650,7 +764,213 @@ def debug_drop_window(circle_id):
         f"  second_most_recent:    {second_most_recent_drop} (tz={getattr(second_most_recent_drop, 'tzinfo', None)})\n"
     ), 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
+
+@app.route('/dev/wipe_self', methods=['GET', 'POST'])
+def dev_wipe_self():
+    if not app.debug:
+        return "❌ Disabled outside DEBUG.", 403
+
+    if request.method == 'GET':
+        # simple form so the browser sends your session cookie on POST
+        return """
+        <form method="post">
+          <button type="submit">Wipe my account (DEV)</button>
+        </form>
+        """, 200
+
+    # POST: same deletion logic as before
+    uid = session.get('user_id')
+    user = db.session.get(User, uid) if uid else None
+    if not user and 'user' in session:
+        spid = session['user'].get('spotify_id') or session['user'].get('id')
+        if spid:
+            user = User.query.filter_by(spotify_id=spid).first()
+    if not user:
+        return "❌ No logged-in user found in session.", 400
+
+    # --- deletion logic (same as before) ---
+    user_id = user.id
+    circles = SoundCircle.query.filter_by(creator_id=user_id).all()
+    circle_ids = [c.id for c in circles]
+    if circle_ids:
+        CircleMembership.query.filter(CircleMembership.circle_id.in_(circle_ids)).delete(synchronize_session=False)
+        sub_ids = [sid for (sid,) in Submission.query.with_entities(Submission.id).filter(
+            Submission.circle_id.in_(circle_ids)
+        ).all()]
+        if sub_ids:
+            SongFeedback.query.filter(SongFeedback.song_id.in_(sub_ids)).delete(synchronize_session=False)
+        for c in circles:
+            db.session.delete(c)
+
+    CircleMembership.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    my_sub_ids = [sid for (sid,) in Submission.query.with_entities(Submission.id).filter_by(user_id=user_id).all()]
+    if my_sub_ids:
+        SongFeedback.query.filter(SongFeedback.song_id.in_(my_sub_ids)).delete(synchronize_session=False)
+        Submission.query.filter(Submission.id.in_(my_sub_ids)).delete(synchronize_session=False)
+    SongFeedback.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    VibeScore.query.filter((VibeScore.user1_id == user_id) | (VibeScore.user2_id == user_id)).delete(synchronize_session=False)
+
+    db.session.delete(user)
+    db.session.commit()
+    session.clear()
+    return "✅ Deleted your account and all related data (DEV only).", 200
+
+# account settings (including change username functionality)
+@app.route('/account-settings', methods=['GET', 'POST'])
+def account_settings():
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
+
+    if request.method == 'POST':
+        # Username logic
+        new_username = request.form.get('new_username', '').strip()
+        if new_username and new_username != user.vibedrop_username:
+            if User.query.filter_by(vibedrop_username=new_username).first():
+                flash('Username already taken. Please choose another one.', 'danger')
+                return redirect(url_for('account_settings'))
+            user.vibedrop_username = new_username
+            session['user']['vibedrop_username'] = new_username
+            flash('Username updated successfully!', 'success')
+
+        # Other fields
+        user.email = request.form.get('email')
+        user.notifications = 'notifications' in request.form
+
+        # ✅ NEW: SMS settings
+        user.phone_number = request.form.get('phone_number')
+        user.sms_notifications = 'sms_notifications' in request.form
+
+        db.session.commit()
+        flash("Settings updated!", "success")
+        return redirect(url_for('account_settings'))
+
+    return render_template('account_settings.html', user=user)
+
+# leave circle route to be used on account settings page
+@app.route('/leave_circle', methods=['POST'])
+def leave_circle():
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    circle_id = request.form.get('circle_id')
+    user_id = User.query.filter_by(spotify_id=session['user']['spotify_id']).first().id
+
+    membership = CircleMembership.query.filter_by(user_id=user_id, circle_id=circle_id).first()
+    if membership:
+        db.session.delete(membership)
+        db.session.commit()
+        flash('You have left the circle.', 'info')
+
+    return redirect(url_for('account_settings'))
+
+# # send email reminders test
+# @app.route('/send-email-test')
+# def send_email_test():
+#     users = User.query.filter_by(sms_notifications=True).all()
+#     for user in users:
+#         if user.email:
+#             send_email(user.email, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
+#     return "✅ Email reminders sent!"
+
+
+@app.route('/send-email-reminders')
+def send_email_reminders():
+    now = datetime.utcnow()
+    print("🔍 Running scheduled email reminder check...")
+    print(f"🕒 Current UTC time: {now.strftime('%Y-%m-%d %I:%M %p')}")
+
+    eligible_circles = SoundCircle.query.all()
+    reminder_count = 0
+    skipped_circles = 0
+
+    for circle in eligible_circles:
+        if not circle.drop_time:
+            print(f"⚠️ Circle '{circle.circle_name}' has no drop_time. Skipping.")
+            continue
+
+        drop_time = circle.drop_time.replace(second=0, microsecond=0)
+        print(f"⏱ Circle '{circle.circle_name}' drop_time: {drop_time.strftime('%Y-%m-%d %I:%M %p %Z')}")
+
+        # Only process if drop is later *today*
+        if drop_time.date() != now.date():
+            print(f"❌ Skipping '{circle.circle_name}' — drop is not today.")
+            skipped_circles += 1
+            continue
+
+        # Compute time until drop
+        time_diff = drop_time - now
+        if time_diff.total_seconds() <= 0:
+            print(f"⏳ Skipping '{circle.circle_name}' — drop has already passed.")
+            skipped_circles += 1
+            continue
+
+        hours, remainder = divmod(int(time_diff.total_seconds()), 3600)
+        minutes = remainder // 60
+
+        if hours == 0 and minutes > 0:
+            time_str = f"{minutes} minutes"
+        elif hours > 0 and minutes == 0:
+            time_str = f"{hours} hour{'s' if hours != 1 else ''}"
+        elif hours > 0 and minutes > 0:
+            time_str = f"{hours} hour{'s' if hours != 1 else ''} and {minutes} minutes"
+        else:
+            time_str = "less than a minute"
+
+        members = [cm.user for cm in circle.memberships if cm.user.email and cm.user.sms_notifications]
+        if len(members) < 2:
+            print(f"🚫 Skipping circle '{circle.circle_name}' — only {len(members)} eligible user(s).")
+            continue
+
+        print(f"📧 Sending reminders for '{circle.circle_name}' to {len(members)} user(s). Drop is in {time_str}.")
+
+        for user in members:
+            try:
+                subject = "VibeDrop Reminder"
+                message = f"🎵 Reminder from VibeDrop: {time_str} until drop time for {circle.circle_name}!"
+                send_email(user.email, message, subject)
+                print(f"✅ Email sent to {user.email}")
+                reminder_count += 1
+            except Exception as e:
+                print(f"❌ Failed to email {user.email}: {e}")
+
+    print(f"✅ Done. {reminder_count} reminder(s) sent. {skipped_circles} circle(s) skipped.")
+    return "✅ Reminder emails processed"
+
+# route for feedback submission
+@app.route('/feedback', methods=['GET', 'POST'])
+def feedback():
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    if request.method == 'POST':
+        message = request.form.get('feedback')
+        
+        # Correct: Get Spotify ID from session
+        spotify_id = session['user']['spotify_id']
+
+        # Lookup the internal DB user by Spotify ID
+        user = User.query.filter_by(spotify_id=spotify_id).first()
+        user_id = user.id if user else None  # Get internal integer ID
+
+        new_feedback = Feedback(user_id=user_id, message=message)
+        db.session.add(new_feedback)
+        db.session.commit()
+
+        flash("Thanks for the feedback!", "success")
+        return redirect(url_for('feedback'))
+
+    return render_template('feedback.html')
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(debug=True, host="0.0.0.0", port=5001)
+
+
+
+
+
+
+

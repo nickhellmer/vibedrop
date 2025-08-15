@@ -1,5 +1,5 @@
 from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app
-from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback, VibeScore, DropCred
+from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback, VibeScore, DropCred, Feedback
 from services.scoring import compute_drop_cred
 import spotipy
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
@@ -865,14 +865,103 @@ def leave_circle():
 
     return redirect(url_for('account_settings'))
 
-# send scheduled email reminders
-@app.route('/send-email-test')
-def send_email_test():
-    users = User.query.filter_by(sms_notifications=True).all()
-    for user in users:
-        if user.email:
-            send_email(user.email, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
-    return "✅ Email reminders sent!"
+# # send email reminders test
+# @app.route('/send-email-test')
+# def send_email_test():
+#     users = User.query.filter_by(sms_notifications=True).all()
+#     for user in users:
+#         if user.email:
+#             send_email(user.email, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
+#     return "✅ Email reminders sent!"
+
+
+@app.route('/send-email-reminders')
+def send_email_reminders():
+    now = datetime.utcnow()
+    print("🔍 Running scheduled email reminder check...")
+    print(f"🕒 Current UTC time: {now.strftime('%Y-%m-%d %I:%M %p')}")
+
+    eligible_circles = SoundCircle.query.all()
+    reminder_count = 0
+    skipped_circles = 0
+
+    for circle in eligible_circles:
+        if not circle.drop_time:
+            print(f"⚠️ Circle '{circle.circle_name}' has no drop_time. Skipping.")
+            continue
+
+        drop_time = circle.drop_time.replace(second=0, microsecond=0)
+        print(f"⏱ Circle '{circle.circle_name}' drop_time: {drop_time.strftime('%Y-%m-%d %I:%M %p %Z')}")
+
+        # Only process if drop is later *today*
+        if drop_time.date() != now.date():
+            print(f"❌ Skipping '{circle.circle_name}' — drop is not today.")
+            skipped_circles += 1
+            continue
+
+        # Compute time until drop
+        time_diff = drop_time - now
+        if time_diff.total_seconds() <= 0:
+            print(f"⏳ Skipping '{circle.circle_name}' — drop has already passed.")
+            skipped_circles += 1
+            continue
+
+        hours, remainder = divmod(int(time_diff.total_seconds()), 3600)
+        minutes = remainder // 60
+
+        if hours == 0 and minutes > 0:
+            time_str = f"{minutes} minutes"
+        elif hours > 0 and minutes == 0:
+            time_str = f"{hours} hour{'s' if hours != 1 else ''}"
+        elif hours > 0 and minutes > 0:
+            time_str = f"{hours} hour{'s' if hours != 1 else ''} and {minutes} minutes"
+        else:
+            time_str = "less than a minute"
+
+        members = [cm.user for cm in circle.memberships if cm.user.email and cm.user.sms_notifications]
+        if len(members) < 2:
+            print(f"🚫 Skipping circle '{circle.circle_name}' — only {len(members)} eligible user(s).")
+            continue
+
+        print(f"📧 Sending reminders for '{circle.circle_name}' to {len(members)} user(s). Drop is in {time_str}.")
+
+        for user in members:
+            try:
+                subject = "VibeDrop Reminder"
+                message = f"🎵 Reminder from VibeDrop: {time_str} until drop time for {circle.circle_name}!"
+                send_email(user.email, message, subject)
+                print(f"✅ Email sent to {user.email}")
+                reminder_count += 1
+            except Exception as e:
+                print(f"❌ Failed to email {user.email}: {e}")
+
+    print(f"✅ Done. {reminder_count} reminder(s) sent. {skipped_circles} circle(s) skipped.")
+    return "✅ Reminder emails processed"
+
+# route for feedback submission
+@app.route('/feedback', methods=['GET', 'POST'])
+def feedback():
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    if request.method == 'POST':
+        message = request.form.get('feedback')
+        
+        # Correct: Get Spotify ID from session
+        spotify_id = session['user']['spotify_id']
+
+        # Lookup the internal DB user by Spotify ID
+        user = User.query.filter_by(spotify_id=spotify_id).first()
+        user_id = user.id if user else None  # Get internal integer ID
+
+        new_feedback = Feedback(user_id=user_id, message=message)
+        db.session.add(new_feedback)
+        db.session.commit()
+
+        flash("Thanks for the feedback!", "success")
+        return redirect(url_for('feedback'))
+
+    return render_template('feedback.html')
 
 if __name__ == "__main__":
     with app.app_context():

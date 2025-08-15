@@ -1,360 +1,337 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ circle.circle_name }} - VibeDrop</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      background-color: #121212;
-      color: #FFFFFF;
-      font-family: 'Space Grotesk', sans-serif;
-      margin: 0;
-      padding: 40px;
+{% extends "base.html" %}
+{% block title %}{{ circle.circle_name }} - VibeDrop{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    padding: 40px;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #7B4EFF;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+    color: #FFFFFF;
+    margin-top: 40px;
+    margin-bottom: 15px;
+  }
+
+  p {
+    font-size: 1.1rem;
+    color: #CCCCCC;
+    margin-bottom: 10px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+  }
+
+  li {
+    margin: 8px 0;
+    color: #FFFFFF;
+  }
+
+  button {
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    background-color: #7B4EFF;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    opacity: 1;
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  button:hover {
+    background-color: #693BDA;
+  }
+
+  a {
+    color: #BB86FC;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .monogram {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .monogram span {
+    font-size: 40px;
+    position: absolute;
+    line-height: 1;
+    -webkit-text-stroke: 1.5px #7B4EFF;
+    color: #FFFFFF;
+  }
+
+  .monogram .v-left {
+    top: -9px;
+    left: 4px;
+    z-index: 2;
+    clip-path: inset(0 12px 0 0);
+  }
+
+  .monogram .v-right {
+    top: -9px;
+    left: 4px;
+    z-index: 0;
+    clip-path: inset(0 0 0 12px);
+  }
+
+  .monogram .d {
+    top: 8px;
+    left: 3px;
+    z-index: 1;
+    transform: rotate(18deg);
+    -webkit-text-stroke: 1.5px #FFFFFF;
+    color: #7B4EFF;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid #444;
+  }
+
+  th {
+    color: #7B4EFF;
+    font-size: 1.1rem;
+  }
+
+  td {
+    font-size: 1.05rem;
+    color: #FFFFFF;
+  }
+
+  button.icon-button {
+    background: transparent;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.45;
+    transition: opacity 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+    margin-right: 6px;
+  }
+
+  button.icon-button:hover { opacity: 0.75; border-color: #666; }
+  button.icon-button:active { transform: scale(0.98); }
+  button.icon-button.active { opacity: 1; border-color: #7B4EFF; }
+
+  td.actions-cell, th.actions-cell {
+    width: 90px;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 20px; }
+    h1 { font-size: 1.8rem; text-align: center; }
+    h2 { font-size: 1.4rem; margin-top: 30px; margin-bottom: 12px; }
+    p, li, td, th { font-size: 0.95rem; }
+    ul { padding-left: 0; }
+    button { width: 100%; padding: 14px; font-size: 1rem; margin-top: 15px; }
+    .monogram { width: 30px; height: 30px; top: 15px; left: 15px; }
+    .monogram span { font-size: 30px; }
+    .monogram .v-left, .monogram .v-right { top: -6px; left: 3px; }
+    .monogram .d { top: 6px; left: 2px; }
+    a { font-size: 0.95rem; display: block; text-align: center; margin-top: 30px; }
+    table th, table td { padding: 6px 0; }
+
+
+    form button {          /* 'submit a vibe' and 'create spotify playlist' buttons on mobile */
+        width: auto;
+        padding: 6px 14px;     /* less vertical + horizontal space */
+        font-size: 0.75rem;    /* slightly smaller text */
+        margin-top: 12px;
     }
 
-    h1 {
-      font-size: 2.5rem;
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: #7B4EFF;
-    }
-
-    h2 {
-      font-size: 1.8rem;
-      color: #FFFFFF;
-      margin-top: 40px;
-      margin-bottom: 15px;
-    }
-
-    p {
-      font-size: 1.1rem;
-      color: #CCCCCC;
-      margin-bottom: 10px;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-bottom: 20px;
-    }
-
-    li {
-      margin: 8px 0;
-      color: #FFFFFF;
-    }
-
-    button {
-      padding: 12px 20px;
-      font-size: 1rem;
-      font-weight: 600;
-      background-color: #7B4EFF;
-      color: #FFFFFF;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      opacity: 1;
-      transition: background-color 0.2s ease-in-out;
-    }
-
-    button:hover {
-      background-color: #693BDA;
-    }
-
-    a {
-      color: #BB86FC;
-      font-weight: 600;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .monogram {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      width: 40px;
-      height: 40px;
-    }
-
-    .monogram span {
-      font-size: 40px;
-      position: absolute;
-      line-height: 1;
-      -webkit-text-stroke: 1.5px #7B4EFF;
-      color: #FFFFFF;
-    }
-
-    .monogram .v-left {
-      top: -9px;
-      left: 4px;
-      z-index: 2;
-      clip-path: inset(0 12px 0 0);
-    }
-
-    .monogram .v-right {
-      top: -9px;
-      left: 4px;
-      z-index: 0;
-      clip-path: inset(0 0 0 12px);
-    }
-
-    .monogram .d {
-      top: 8px;
-      left: 3px;
-      z-index: 1;
-      transform: rotate(18deg);
-      -webkit-text-stroke: 1.5px #FFFFFF;
-      color: #7B4EFF;
-    }
-      
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 12px;
-      border-bottom: 1px solid #444;
-    }
-
-    th {
-      color: #7B4EFF;
-      font-size: 1.1rem;
-    }
-
-    td {
-      font-size: 1.05rem;
-      color: #FFFFFF;
-    }
-      
-    @media (max-width: 768px) {
-      body {
-        padding: 20px;
-      }
-
-      h1 {
-        font-size: 1.8rem;
-        text-align: center;
-      }
-
-      h2 {
-        font-size: 1.4rem;
-        margin-top: 30px;
-        margin-bottom: 12px;
-      }
-
-      p, li, td, th {
-        font-size: 0.95rem;
-      }
-
-      ul {
-        padding-left: 0;
-      }
-
-      button {
-        width: 100%;
-        padding: 14px;
-        font-size: 1rem;
-        margin-top: 15px;
-      }
-
-      table {
-        font-size: 0.95rem;
-      }
-
-      .monogram {
-        width: 30px;
-        height: 30px;
-        top: 15px;
-        left: 15px;
-      }
-
-      .monogram span {
-        font-size: 30px;
-      }
-
-      .monogram .v-left,
-      .monogram .v-right {
-        top: -6px;
-        left: 3px;
-      }
-
-      .monogram .d {
-        top: 6px;
-        left: 2px;
-      }
-
-      a {
-        font-size: 0.95rem;
-        display: block;
-        text-align: center;
-        margin-top: 30px;
-      }
-
-      table th,
-      table td {
-        padding: 6px 0;
-      }
-    }
-
-    /* --- Inline feedback icon buttons --- */
     button.icon-button {
-      background: transparent;
-      border: 1px solid #444;
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 1rem;      /* emoji size */
-      line-height: 1;
-      cursor: pointer;
-      opacity: 0.45;        /* “not selected” look */
-      transition: opacity 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
-      margin-right: 6px;
+      font-size: 0.6rem;
+      padding: 3px 6px;        /* 👈 smaller horizontal padding */
+      min-width: auto;         /* 👈 let the button shrink */
+      width: auto;             /* 👈 no full-width on mobile */
+      display: inline-flex;    /* 👈 ensures tight wrap */
+      align-items: center;     /* 👈 vertical centering */
+      justify-content: center; /* 👈 horizontal centering */
     }
-    button.icon-button:hover { opacity: 0.75; border-color: #666; }
-    button.icon-button:active { transform: scale(0.98); }
-    button.icon-button.active { opacity: 1; border-color: #7B4EFF; }
     
-    td.actions-cell, th.actions-cell {
-      width: 90px;
-      white-space: nowrap;
+    button.icon-button span.emoji {
+        font-size: 0.9rem;
+        display: inline-block;
+        line-height: 1;
     }
-      
-  </style>
-</head>
-<body>
-     {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul class="flashes">
-          {% for message in messages %}
-            <li>{{ message }}</li>
-          {% endfor %}
-        </ul>
+    
+    td.actions-cell {
+        width: 60px;
+        vertical-align: middle;      /* 👈 centers contents vertically */
+        text-align: center;
+    }
+
+    td.actions-cell form {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;                   /* optional: small space between like/dislike */
+    }
+
+    table td, table th {         /* 👈 mobile view tables */
+        font-size: 0.65rem;
+        word-break: break-word;     /* 👈 helps wrap long artist/song names */
+        padding: 2px 4px;           /* slightly more vertical + horizontal space */
+    }
+    
+    td.actions-cell {
+      width: 60px;                  /* 👈 smaller font size for Fresh From the Drop table */
+      vertical-align: middle;
+      text-align: center;
+    }
+    
+    td:last-child {
+      font-size: 0.55rem;           /* 👈 smaller size for Submitted On column only in Fresh From the Drop table */
+    }
+  }
+</style>
+
+<div class="monogram">
+  <span class="v-left">V</span>
+  <span class="d">D</span>
+  <span class="v-right">V</span>
+</div>
+
+<h1>🎶 {{ circle.circle_name }}</h1>
+
+<p><strong>Drop Frequency:</strong> {{ circle.drop_frequency }}</p>
+<p><strong>Drop Time:</strong> {{ circle.drop_time | to_est | datetimeformat('%I:%M %p EST') }}</p>
+
+{% if circle.drop_frequency == 'Weekly' %}
+  <p><strong>Drop Day:</strong> {{ circle.drop_day1 }}</p>
+{% elif circle.drop_frequency == 'Biweekly' %}
+  <p><strong>Drop Days:</strong> {{ circle.drop_day1 }} &amp; {{ circle.drop_day2 }}</p>
+{% endif %}
+
+<p><strong>Invite Code:</strong> {{ circle.invite_code }}</p>
+
+<h2>Members</h2>
+<table>
+  <tr>
+    <th>Username</th>
+    <th>Submitted This Cycle?</th>
+  </tr>
+  {% for member in members %}
+  <tr>
+    <td>{{ member.vibedrop_username }}</td>
+    <td>
+      {% if member.id in submitted_user_ids %}
+        ✅
+      {% else %}
+        ❌
       {% endif %}
-    {% endwith %}
-    
-    <div class="monogram">
-        <span class="v-left">V</span>
-        <span class="d">D</span>
-        <span class="v-right">V</span>
-    </div>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
 
-    <h1>🎶 {{ circle.circle_name }}</h1>
-    <p><strong>Drop Frequency:</strong> {{ circle.drop_frequency }}</p>
-    <p><strong>Drop Time:</strong> {{ circle.drop_time | to_est | datetimeformat('%I:%M %p EST') }}</p>
-    <!-- Show days based on frequency -->
-    {% if circle.drop_frequency == 'Weekly' %}
-      <p><strong>Drop Day:</strong> {{ circle.drop_day1 }}</p>
-    {% elif circle.drop_frequency == 'Biweekly' %}
-      <p><strong>Drop Days:</strong> {{ circle.drop_day1 }} &amp; {{ circle.drop_day2 }}</p>
-    {% endif %}
-    <p><strong>Invite Code:</strong> {{ circle.invite_code }}</p>
+<form action="{{ url_for('submit_song', circle_id=circle.id) }}">
+  <button type="submit">🎵 Submit a Vibe</button>
+</form>
 
-    <h2>Members</h2>
+{% if testing_mode %}
+  <h2>Submitted Vibes (Testing Mode Only)</h2>
+  {% if submissions %}
     <table>
+      <thead>
+        <tr><th>Vibe Name</th><th>Vibe Artist</th><th>Submitted On</th></tr>
+      </thead>
+      <tbody>
+        {% for submission in submissions %}
         <tr>
-            <th>Username</th>
-            <th>Submitted This Cycle?</th>
-        </tr>
-        {% for member in members %}
-        <tr>
-            <td>{{ member.vibedrop_username }}</td>
-            <td>
-                {% if member.id in submitted_user_ids %}
-                    ✅
-                {% else %}
-                    ❌
-                {% endif %}
-            </td>
+          <td>{{ submission.track_name or "Unknown Title" }}</td>
+          <td>{{ submission.track_artist or "Unknown Artist" }}</td>
+          <td>{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y at %I:%M %p EST') }}</td>
         </tr>
         {% endfor %}
+      </tbody>
     </table>
+  {% else %}
+    <p>No vibes dropped yet.</p>
+  {% endif %}
+{% endif %}
 
-    <form action="{{ url_for('submit_song', circle_id=circle.id) }}">
-        <button type="submit">🎵 Submit a Vibe</button>
-    </form>
-    
-    {% if testing_mode %}
-        <h2>Submitted Vibes (Testing Mode Only)</h2>
-        {% if submissions %}
-          <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
-            <thead>
-              <tr style="border-bottom: 2px solid #7B4EFF;">
-                <th align="left">Vibe Name</th>
-                <th align="left">Vibe Artist</th>
-                <th align="left">Submitted On</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for submission in submissions %}
-                <tr style="border-bottom: 1px solid #444;">
-                  <td>{{ submission.track_name or "Unknown Title" }}</td>
-                  <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-                  <td>{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y at %I:%M %p EST') }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <p>No vibes dropped yet.</p>
-        {% endif %}
-    {% endif %}
-    
-    <h2>🎶 Fresh From the Drop — Build Your Playlist</h2>
-    {% if previous_submissions %}
-      <form action="{{ url_for('create_playlist', circle_id=circle.id) }}" method="POST">
-          <button type="submit">🎧 Create Spotify Playlist</button>
-      </form>
-    
-      <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
-          <thead>
-            <tr style="border-bottom: 2px solid #7B4EFF;">
-              <th class="actions-cell" align="left"></th>  <!-- buttons column -->
-              <th align="left">Vibe Name</th>
-              <th align="left">Vibe Artist</th>
-              <th align="left">Submitted On</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for submission in previous_submissions %}
-              <tr style="border-bottom: 1px solid #444;">
-                <td class="actions-cell">
-                  {% if submission.submitter_id != user_id or testing_mode %}
-                    <form action="{{ url_for('submit_feedback') }}" method="POST" style="display:inline;">
-                      <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
-                      <button type="submit" name="feedback" value="like"
-                        class="icon-button {% if submission.user_feedback == 'like' %}active{% endif %}">👍</button>
-                      <button type="submit" name="feedback" value="dislike"
-                        class="icon-button {% if submission.user_feedback == 'dislike' %}active{% endif %}">👎</button>
-                    </form>
-                  {% else %}
-                    <span style="color:#888;">—</span>
-                  {% endif %}
-                </td>
-                <td>{{ submission.track_name or "Unknown Title" }}</td>
-                <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-                <td>{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y at %I:%M %p EST') }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-    {% else %}
-      <p>🕐 No previous cycles yet — this Sound Circle is just getting started! Check back after the next drop deadline</p>
-    {% endif %}
-    
-    
-    
-  <br><br>
-  <a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
-    
-    <br><br>
-    {% if testing_mode %}
-      <p style="color: orange;">🧪 Testing Mode Enabled — showing submissions regardless of deadline.</p>
-    {% endif %}
-</body>
-</html>
+<h2>🎶 Fresh From the Drop — Build Your Playlist</h2>
+{% if previous_submissions %}
+  <form action="{{ url_for('create_playlist', circle_id=circle.id) }}" method="POST">
+    <button type="submit">🎧 Create Spotify Playlist</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="actions-cell"></th>
+        <th>Vibe Name</th>
+        <th>Vibe Artist</th>
+        <th>Submitted On</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for submission in previous_submissions %}
+      <tr>
+        <td class="actions-cell">
+          {% if submission.submitter_id != user_id or testing_mode %}
+            <form action="{{ url_for('submit_feedback') }}" method="POST" style="display:inline;">
+              <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
+                <button type="submit" name="feedback" value="like"
+                  class="icon-button {% if submission.user_feedback == 'like' %}active{% endif %}">
+                  <span class="emoji">👍</span>
+                </button>
+                <button type="submit" name="feedback" value="dislike"
+                  class="icon-button {% if submission.user_feedback == 'dislike' %}active{% endif %}">
+                  <span class="emoji">👎</span>
+                </button>
+            </form>
+          {% else %}
+            <span style="color:#888;">—</span>
+          {% endif %}
+        </td>
+        <td>{{ submission.track_name or "Unknown Title" }}</td>
+        <td>{{ submission.track_artist or "Unknown Artist" }}</td>
+        <td>{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y at %I:%M %p EST') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>🕐 No previous cycles yet — this Sound Circle is just getting started! Check back after the next drop deadline</p>
+{% endif %}
+
+<br><br>
+<a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
+
+{% if testing_mode %}
+  <p style="color: orange;">🧪 Testing Mode Enabled — showing submissions regardless of deadline.</p>
+{% endif %}
+{% endblock %}
