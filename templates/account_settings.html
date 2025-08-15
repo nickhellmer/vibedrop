@@ -123,6 +123,9 @@
     <label>Spotify Display Name</label>
     <input type="text" value="{{ user.display_name or '—' }}" readonly class="readonly">
 
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" value="{{ user.email or '' }}" required>
+
     <label for="phone_number">Phone Number (for SMS reminders)</label>
     <input type="text" name="phone_number" placeholder="+1 (555) 123-4567" value="{{ user.phone_number or '' }}">
     

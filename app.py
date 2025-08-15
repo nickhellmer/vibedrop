@@ -13,7 +13,7 @@ import pytz
 from functools import wraps
 from sqlalchemy import func, case
 from services.scoring import compute_drop_cred
-from utils.sms import send_sms # sms reminders 
+from utils.sms import send_email # sms reminders 
 # from spotipy import Spotify
 # import secrets  # for join codes
 # from flask_sqlalchemy import SQLAlchemy
@@ -865,15 +865,14 @@ def leave_circle():
 
     return redirect(url_for('account_settings'))
 
-# send scheduled text reminders
-@app.route('/send-sms-test')
-def send_sms_test():
+# send scheduled email reminders
+@app.route('/send-email-test')
+def send_email_test():
     users = User.query.filter_by(sms_notifications=True).all()
     for user in users:
-        if user.phone_number:
-            send_sms(user.phone_number, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
-
-    return "✅ SMS reminders sent!"
+        if user.email:
+            send_email(user.email, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
+    return "✅ Email reminders sent!"
 
 if __name__ == "__main__":
     with app.app_context():
