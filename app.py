@@ -13,6 +13,7 @@ import pytz
 from functools import wraps
 from sqlalchemy import func, case
 from services.scoring import compute_drop_cred
+from services.sms import send_sms # sms reminders 
 # from spotipy import Spotify
 # import secrets  # for join codes
 # from flask_sqlalchemy import SQLAlchemy
@@ -837,6 +838,10 @@ def account_settings():
         user.email = request.form.get('email')
         user.notifications = 'notifications' in request.form
 
+        # ✅ NEW: SMS settings
+        user.phone_number = request.form.get('phone_number')
+        user.sms_notifications = 'sms_notifications' in request.form
+
         db.session.commit()
         flash("Settings updated!", "success")
         return redirect(url_for('account_settings'))
@@ -859,6 +864,16 @@ def leave_circle():
         flash('You have left the circle.', 'info')
 
     return redirect(url_for('account_settings'))
+
+# send scheduled text reminders
+@app.route('/send-sms-test')
+def send_sms_test():
+    users = User.query.filter_by(sms_notifications=True).all()
+    for user in users:
+        if user.phone_number:
+            send_sms(user.phone_number, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
+
+    return "✅ SMS reminders sent!"
 
 if __name__ == "__main__":
     with app.app_context():

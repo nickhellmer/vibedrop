@@ -123,12 +123,12 @@
     <label>Spotify Display Name</label>
     <input type="text" value="{{ user.display_name or '—' }}" readonly class="readonly">
 
-    <label for="email">Email</label>
-    <input type="email" name="email" value="{{ user.email or '' }}">
-
+    <label for="phone_number">Phone Number (for SMS reminders)</label>
+    <input type="text" name="phone_number" placeholder="+1 (555) 123-4567" value="{{ user.phone_number or '' }}">
+    
     <label>
-      <input type="checkbox" name="notifications" {% if user.notifications %}checked{% endif %}>
-      Enable email notifications
+      <input type="checkbox" name="sms_notifications" {% if user.sms_notifications %}checked{% endif %}>
+      Enable SMS reminders
     </label>
 
     <button type="submit">Save Changes</button>
