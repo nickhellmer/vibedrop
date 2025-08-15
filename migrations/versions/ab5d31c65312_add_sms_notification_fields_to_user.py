@@ -1,10 +1,10 @@
 """Add SMS notification fields to User
 
 Revision ID: ab5d31c65312
-Revises: 156caecbb12b
+Revises: 716e651d170f
 Create Date: 2025-08-14 19:23:49.148250
-
 """
+
 from alembic import op
 import sqlalchemy as sa
 
