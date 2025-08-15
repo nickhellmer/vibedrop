@@ -284,9 +284,37 @@
 
 <h2>🎶 Fresh From the Drop — Build Your Playlist</h2>
 {% if previous_submissions %}
-  <form action="{{ url_for('create_playlist', circle_id=circle.id) }}" method="POST">
-    <button type="submit">🎧 Create Spotify Playlist</button>
-  </form>
+    <button onclick="createPlaylist()">🎧 Create & Open Playlist in Spotify</button>
+    
+    <script>
+      async function createPlaylist() {
+        try {
+          const response = await fetch("{{ url_for('create_playlist', circle_id=circle.id) }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+          });
+    
+          if (!response.ok) {
+            const errorData = await response.json();
+            alert(errorData.error || "Something went wrong.");
+            return;
+          }
+    
+          const data = await response.json();
+          if (data.playlist_uri) {
+            window.location.href = data.playlist_uri;
+            setTimeout(() => {
+              window.location.href = data.playlist_url;
+            }, 1200);
+          } else {
+            alert("Playlist created, but no Spotify link returned.");
+          }
+        } catch (error) {
+          console.error("Error creating playlist:", error);
+          alert("❌ Failed to create playlist: " + error.message);
+        }
+      }
+    </script>
 
   <table>
     <thead>

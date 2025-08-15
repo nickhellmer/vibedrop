@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app
+from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app, jsonify
 from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback, VibeScore, DropCred, Feedback
 from services.scoring import compute_drop_cred
 import spotipy
@@ -602,15 +602,14 @@ def create_playlist(circle_id):
         return redirect(url_for('home'))
     
     refresh_token_if_needed(session['user'])  # Refresh token if needed
-
     user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
     circle = SoundCircle.query.get_or_404(circle_id)
 
     # Get drop window using new logic
-    print("circle drop time right before window calculation:", circle.drop_time)
+    # print("circle drop time right before window calculation:", circle.drop_time)
     drop_window = get_cycle_window(circle)
     if not drop_window:
-        return "⚠️ Could not determine drop cycle.", 400
+        return jsonify({"error": "Could not determine drop cycle."}), 400
 
     # save next, most recent, and second most recent drops as utc datetime for comparison in previous_submissions query
     next_drop, most_recent_drop, second_most_recent_drop = (
@@ -627,14 +626,14 @@ def create_playlist(circle_id):
     ]
     
     all_subs = Submission.query.filter_by(circle_id=circle.id).all()
-    for sub in all_subs:
-        print("submitted_at =", sub.submitted_at.isoformat())
-    print("next_drop:", next_drop)
-    print("previous_submissions", previous_submissions)
-    print("Second most recent drop:", second_most_recent_drop.isoformat())
-    print("Most recent drop:", most_recent_drop.isoformat())
+    # for sub in all_subs:
+    #     print("submitted_at =", sub.submitted_at.isoformat())
+    # print("next_drop:", next_drop)
+    # print("previous_submissions", previous_submissions)
+    # print("Second most recent drop:", second_most_recent_drop.isoformat())
+    # print("Most recent drop:", most_recent_drop.isoformat())
     if not previous_submissions:
-        return "⚠️ No submissions found for the previous cycle.", 400
+        return jsonify({"error": "No submissions found for the previous cycle."}), 400
 
     # Spotify auth
     sp = spotipy.Spotify(auth=session['user']['access_token'])
@@ -654,17 +653,19 @@ def create_playlist(circle_id):
 
         track_uris = [f"spotify:track:{sub.spotify_track_id}" for sub in previous_submissions if sub.spotify_track_id]
         sp.playlist_add_items(playlist_id=playlist['id'], items=track_uris)
-        print("✅ Created playlist:", playlist['external_urls']['spotify'], flush=True)
-
-        # flash(f"✅ Playlist '{playlist_name}' created on your Spotify!")
-        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
-        return f"✅ Playlist '{playlist_name}' created and added to your Spotify!", 200
+        # print("✅ Created playlist:", playlist['external_urls']['spotify'], flush=True)
+        
+        # return f"✅ Playlist '{playlist_name}' created and added to your Spotify!", 200
+        return jsonify({
+            "playlist_id": playlist['id'],
+            "playlist_uri": f"spotify://playlist/{playlist['id']}",
+            "playlist_url": playlist['external_urls']['spotify'],
+            "message": f"✅ Playlist '{playlist_name}' created and added to your Spotify!"
+        })
 
     except Exception as e:
-        print("Playlist creation error:", e)
-        # flash("❌ Failed to create playlist. Try logging out and back in.")
-        # return redirect(url_for('circle_dashboard', circle_id=circle.id))
-        return "❌ Failed to create playlist. Try logging out and back in.", 500
+        # print("Playlist creation error:", e)
+        return jsonify({"error": "Failed to create playlist. Try logging out and back in."}), 500
 
 # route to the all users page 
 @app.route('/all-users', methods=['GET'])
