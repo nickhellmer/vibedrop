@@ -6,80 +6,300 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;600&display=swap" rel="stylesheet">
 
-    <style>
-      body {
-        background-color: #121212;
-        color: #FFFFFF;
-        font-family: 'Space Grotesk', sans-serif;
-        margin: 0;
-        padding: 40px 20px;
-      }
-      a {
-        color: #7B4EFF;
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-      button {
-        background-color: #7B4EFF;
-        color: white;
-        padding: 10px 16px;
-        font-size: 1rem;
-        font-family: 'Space Grotesk', sans-serif;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-      }
-      button:hover {
-        background-color: #6a3fdc;
-      }
-    .flash-message {
-      background-color: #1e1e1e;
-      border: 1px solid #7B4EFF;
-      color: white;
-      padding: 6px 10px;
-      margin: 12px auto;
-      border-radius: 5px;
-      width: 65%;
-      max-width: 280px;
-      text-align: center;
-      font-size: 0.75rem;
-      line-height: 1.1;
-      opacity: 1;
-      transition: opacity 0.5s ease;
+  <style>
+    /* ================================
+       Design Tokens
+    ===================================*/
+    :root{
+      --bg:#121212;
+      --panel:#1a1a1a;
+      --text:#ffffff;
+      --muted:#cccccc;
+      --brand:#7B4EFF;
+      --brand-ghost:#7b4eff22;
+      --danger:#ff4d4f;
+      --success:#20c997;
+      --warning:#f59f00;
+      --radius:14px;
+      --gap:20px;
+      --shadow:0 6px 28px rgba(0,0,0,.35);
+      --border:#2a2a2a;
     }
-    </style>
+
+    *{ box-sizing:border-box }
+    html, body{ height:100% }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Space Grotesk',sans-serif;
+    }
+    a{ color:var(--brand); text-decoration:none }
+    a:hover{ text-decoration:underline }
+
+    /* ================================
+       Layout
+    ===================================*/
+    main{
+      padding:40px 20px;
+    }
+    .container{
+      max-width:1100px;
+      margin:0 auto;
+    }
+    .stack{ display:flex; flex-direction:column; gap:16px }
+    .row{ display:flex; flex-wrap:wrap; align-items:center; gap:12px }
+
+    /* Topbar & Titles */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px;
+    }
+    .page-title{
+      margin:0; font-weight:600; color:var(--brand);
+      font-size:2.2rem;
+    }
+    .subtle{ color:var(--muted) }
+
+    .h2-tight{
+      margin:0 0 8px 0;
+      font-size:1.35rem;
+    }
+
+    /* ================================
+       Cards
+    ===================================*/
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:20px;
+    }
+
+    /* ================================
+       Buttons
+    ===================================*/
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      background:var(--brand); color:#fff;
+      border:0; border-radius:12px;
+      padding:12px 18px; font-weight:600; cursor:pointer;
+      font-family:'Space Grotesk',sans-serif;
+      transition:transform .04s ease, opacity .15s ease, background .15s ease;
+    }
+    .btn:hover{ background:#6a3fdc }
+    .btn:active{ transform:translateY(1px) }
+    .btn:disabled{ opacity:.55; cursor:not-allowed }
+
+    .btn.ghost{ background:transparent; color:var(--brand); border:1px solid var(--brand) }
+    .btn.danger{ background:var(--danger) }
+    .btn.sm{ padding:8px 12px; font-size:.95rem; border-radius:10px }
+    .btn.lg{ padding:14px 22px; font-size:1.05rem; border-radius:14px }
+
+    /* Icon buttons (like/dislike) */
+    .icon-button{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:40px; height:40px; border-radius:999px;
+      background:#171717; border:1px solid var(--border); color:var(--text);
+      cursor:pointer; transition:background .15s ease, border-color .15s ease, transform .04s ease;
+    }
+    /* Small variant for icon buttons (like/dislike in tables) */
+    .icon-button.sm{
+      width:28px;
+      height:28px;
+      font-size:.9rem;   /* shrink emoji/text */
+    }
+    .icon-button:hover{ background:#151515 }
+    .icon-button:active{ transform:translateY(1px) }
+    .icon-button.active{ border-color:var(--brand); box-shadow:0 0 0 2px var(--brand-ghost) inset; }
+
+    /* ================================
+       Tables
+    ===================================*/
+    table.table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+      background:#141414;
+    }
+    /* A scrollable viewport for tables (vertical + horizontal) */
+    .table-viewport{
+      position: relative;
+      max-height: 420px;           /* desktop vertical window */
+      overflow: auto;              /* both axes */
+      border-radius: 12px;
+      /* keep same background feel as .table */
+      background:#141414;
+      border:1px solid var(--border);
+    }
+    .table-viewport .table{ margin:0; border:none; } /* prevent double borders */
+    .table thead th{
+      background:#181818; color:var(--muted);
+      font-weight:600; text-align:left; padding:12px 14px; border-bottom:1px solid var(--border);
+    }
+    .table tbody td{
+      padding:12px 14px; border-top:1px solid var(--border);
+    }
+    .table tbody tr:hover{ background:#161616 }
+    .col-narrow{ width:1%; white-space:nowrap }
+    .col-wide{ width:40% }
+    .actions-cell{ display:flex; align-items:center; justify-content:center; gap:8px }
+    .nowrap{ white-space:nowrap; }
     
+    /* Slightly smaller font + tighter row padding */
+    .table--compact thead th{ padding:8px 10px; font-size:.95rem; }
+    .table--compact tbody td{ padding:8px 10px; font-size:.95rem; }
+
+    /* Keep headers visible while horizontally scrolling */
+    .table thead th{
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background:#181818; /* reinforce BG while sticky */
+    }
+    
+    /* Vertical centering across all cells */
+    .table th, .table td { vertical-align: middle; }
+
+    /* Single-line truncate with ellipsis */
+    .truncate{
+      display:inline-block;
+      max-width: 420px;   /* desktop default; overridden on mobile below */
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    /* ================================
+       Forms
+    ===================================*/
+    label{ display:block; margin-bottom:6px; color:var(--muted) }
+    .form-control{
+      width:100%; background:#171717; color:var(--text);
+      border:1px solid var(--border); border-radius:12px; padding:10px 12px;
+      font-family:'Space Grotesk',sans-serif;
+    }
+    select.form-control{ appearance:none; background-image: none; }
+    .help{ color:var(--muted); font-size:.9rem; margin-top:6px }
+    .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .form-row.cols-3{ grid-template-columns:1fr 1fr 1fr }
+
+    /* ================================
+       Flash messages (existing preserved, + variants)
+    ===================================*/
+    .flash-message{
+      background-color:#1e1e1e;
+      border:1px solid var(--brand);
+      color:#fff;
+      padding:8px 12px;
+      margin:12px auto;
+      border-radius:8px;
+      width:65%;
+      max-width:320px;
+      text-align:center;
+      font-size:.85rem;
+      line-height:1.2;
+      opacity:1;
+      transition:opacity .5s ease;
+    }
+    .flash-message.success{ border-color:var(--success) }
+    .flash-message.error{ border-color:var(--danger) }
+    .flash-message.info{ border-color:var(--brand) }
+
+    /* ================================
+       Badges
+    ===================================*/
+    .badge{
+      display:inline-block; padding:4px 8px; border-radius:999px;
+      font-size:.85rem; line-height:1; border:1px solid var(--border); background:#171717; color:var(--muted);
+    }
+    .badge.success{ border-color:var(--success); color:var(--success) }
+    .badge.warning{ border-color:var(--warning); color:var(--warning) }
+    .badge.info{ border-color:var(--brand); color:var(--brand) }
+
+    /* ================================
+       Monogram (use your finalized spec)
+    ===================================*/
+    .monogram{ position:relative; width:40px; height:40px; }
+    .monogram span{
+      position:absolute; font-size:40px;
+      -webkit-text-stroke:1.5px purple; text-stroke:1.5px purple; line-height:1;
+    }
+    .v-left{ top:-9px; left:4px; clip-path:inset(0 12px 0 0); z-index:2 }
+    .v-right{ top:-9px; left:4px; clip-path:inset(0 0 0 12px); z-index:0 }
+    .d{ top:8px; left:3px; transform:rotate(18deg); color:#7B4EFF; -webkit-text-stroke:1.5px white; text-stroke:1.5px white; z-index:1 }
+
+    /* ================================
+       Global Mobile Overrides
+    ===================================*/
+    @media (max-width: 768px){
+      main{ padding:22px 14px }
+      .page-title{ font-size:1.7rem }
+      .btn{ padding:10px 14px; font-size:.95rem }
+      .btn.lg{ padding:12px 18px; font-size:1rem }
+      .icon-button{ width:36px; height:36px }
+      .table-viewport{ max-height: 50vh; }  /* taller window on phones */
+
+      .form-row, .form-row.cols-3{ grid-template-columns:1fr }
+
+      /* Table: make horizontally scrollable on small screens */
+      table.table{
+        display:block;
+        width:100%;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        border-radius:12px;
+      }
+      .actions-cell{ gap:6px }
+      .truncate{ max-width: 220px; }           /* shorter line on mobile */
+      .icon-button{ width:36px; height:36px }  /* you already have this—keep it */
+      .table thead th{ font-size: .95rem; }
+      .table tbody td{ font-size: .95rem; }
+        
+    }
+
+
+  </style>
+
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-  <!-- Include sidebar menu -->
+  <!-- Sidebar (existing include) -->
   {% include 'sidebar.html' %}
 
-  <!-- Page-specific content -->
-<main>
-  <!-- Flash Messages -->
-  <div id="flash-container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash-message {{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-  </div>
+  <!-- Main content area -->
+  <main>
+    <!-- Flash Messages -->
+    <div id="flash-container" class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
 
-  {% block content %}{% endblock %}
-</main>
-    <script>
-      setTimeout(() => {
-        const flashes = document.querySelectorAll('.flash-message');
-        flashes.forEach(flash => {
-          flash.style.opacity = 0;
-          setTimeout(() => flash.remove(), 500);
-        });
-      }, 4000);
-    </script>
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <script>
+    // Auto-dismiss flashes (existing behavior preserved)
+    setTimeout(() => {
+      const flashes = document.querySelectorAll('.flash-message');
+      flashes.forEach(flash => {
+        flash.style.opacity = 0;
+        setTimeout(() => flash.remove(), 500);
+      });
+    }, 4000);
+  </script>
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>
