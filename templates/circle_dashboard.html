@@ -3,6 +3,11 @@
 
 {% block content %}
 
+<div class="topbar">
+  <h1 class="page-title">{{ circle.circle_name }}</h1>
+  </div>
+</div>
+
 <div class="stack">
 
   <!-- NEXT DROP / META -->
@@ -29,7 +34,7 @@
         <div class="row">
           <a class="btn ghost" href="{{ url_for('submit_song', circle_id=circle.id) }}">🎵 Submit a Vibe</a>
           {% if previous_submissions %}
-            <button type="button" class="btn ghost" onclick="createPlaylist()">Create & Open Playlist in Spotify</button>
+            <button type="button" class="btn ghost" onclick="createPlaylist()">Create & Open Fresh From the Drop Playlist in Spotify</button>
           {% endif %}
         </div>
       </div>

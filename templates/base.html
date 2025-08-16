@@ -120,9 +120,6 @@
       width:100%;
       border-collapse:separate;
       border-spacing:0;
-      border:1px solid var(--border);
-      border-radius:12px;
-      overflow:hidden;
       background:#141414;
     }
     /* A scrollable viewport for tables (vertical + horizontal) */
@@ -134,8 +131,9 @@
       /* keep same background feel as .table */
       background:#141414;
       border:1px solid var(--border);
+      -webkit-overflow-scrolling: touch; /* iOS sticky friendliness */
     }
-    .table-viewport .table{ margin:0; border:none; } /* prevent double borders */
+    .table-viewport .table{ margin:0; }   /* prevent extra spacing */
     .table thead th{
       background:#181818; color:var(--muted);
       font-weight:600; text-align:left; padding:12px 14px; border-bottom:1px solid var(--border);
@@ -163,6 +161,9 @@
     
     /* Vertical centering across all cells */
     .table th, .table td { vertical-align: middle; }
+
+    /* subtle divider right under the sticky header */
+    .table thead th{ border-bottom:1px solid var(--border); }
 
     /* Single-line truncate with ellipsis */
     .truncate{
@@ -237,22 +238,12 @@
     ===================================*/
     @media (max-width: 768px){
       main{ padding:22px 14px }
-      .page-title{ font-size:1.7rem }
+      .page-title{ font-size:1.4rem }
       .btn{ padding:10px 14px; font-size:.95rem }
       .btn.lg{ padding:12px 18px; font-size:1rem }
       .icon-button{ width:36px; height:36px }
       .table-viewport{ max-height: 50vh; }  /* taller window on phones */
-
       .form-row, .form-row.cols-3{ grid-template-columns:1fr }
-
-      /* Table: make horizontally scrollable on small screens */
-      table.table{
-        display:block;
-        width:100%;
-        overflow-x:auto;
-        -webkit-overflow-scrolling:touch;
-        border-radius:12px;
-      }
       .actions-cell{ gap:6px }
       .truncate{ max-width: 220px; }           /* shorter line on mobile */
       .icon-button{ width:36px; height:36px }  /* you already have this—keep it */
