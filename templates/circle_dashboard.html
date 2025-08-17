@@ -5,41 +5,64 @@
 
 <div class="topbar">
   <h1 class="page-title">{{ circle.circle_name }}</h1>
-  </div>
 </div>
 
 <div class="stack">
 
-  <!-- NEXT DROP / META -->
-  <section class="card">
-    <div class="stack">
-      <div class="row" style="justify-content: space-between;">
-        <div class="stack">
-          <p class="subtle" style="margin:0;">
-            <strong>Drop Frequency:</strong> {{ circle.drop_frequency }}
-          </p>
-          <p class="subtle" style="margin:0;">
-            <strong>Drop Time:</strong>
-            {{ circle.drop_time | to_est | datetimeformat('%I:%M %p EST') }}
-          </p>
-
-          {% if circle.drop_frequency == 'Weekly' %}
-            <p class="subtle" style="margin:0;"><strong>Drop Day:</strong> {{ circle.drop_day1 }}</p>
-          {% elif circle.drop_frequency == 'Biweekly' %}
-            <p class="subtle" style="margin:0;"><strong>Drop Days:</strong> {{ circle.drop_day1 }} &amp; {{ circle.drop_day2 }}</p>
-          {% endif %}
-          <p class="subtle" style="margin:0;"><strong>Invite Code:</strong> {{ circle.invite_code }}</p>
+    <!-- NEXT DROP / META -->
+    <section class="card">
+      <div class="row between">
+        <!-- Left: Meta grid -->
+        <div class="meta-grid">
+          <div class="kv">
+            <span class="k">Drop Frequency</span>
+            <span class="v chip">{{ circle.drop_frequency }}</span>
+          </div>
+    
+          <div class="kv">
+            <span class="k">Drop Time</span>
+            <span class="v chip">{{ circle.drop_time | to_est | datetimeformat('%I:%M %p EST') }}</span>
+          </div>
+    
+          <div class="kv">
+            <span class="k">Drop Day(s)</span>
+            <span class="v chip">
+              {% if circle.drop_frequency == 'Weekly' %}
+                {{ circle.drop_day1 }}
+              {% elif circle.drop_frequency == 'Biweekly' %}
+                {{ circle.drop_day1 }} &nbsp;&amp;&nbsp; {{ circle.drop_day2 }}
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+    
+          <div class="kv">
+            <span class="k">Invite Code</span>
+            <span class="v">
+              <span class="code-pill" id="invite-code">{{ circle.invite_code }}</span>
+              <button class="icon-button sm" type="button" title="Copy invite code" aria-label="Copy invite code"
+                      onclick="copyInviteCode()">📋</button>
+            </span>
+          </div>
         </div>
-
+    
+        <!-- Right: Actions -->
         <div class="row">
-          <a class="btn ghost" href="{{ url_for('submit_song', circle_id=circle.id) }}">🎵 Submit a Vibe</a>
+          <a class="btn sm equal" href="{{ url_for('submit_song', circle_id=circle.id) }}">🎵 Submit a Vibe</a>
+        
           {% if previous_submissions %}
-            <button type="button" class="btn ghost" onclick="createPlaylist()">Create & Open Fresh From the Drop Playlist in Spotify</button>
+            <button type="button" class="btn xs" onclick="createPlaylist()">Create & Open Playlist</button>
           {% endif %}
+        
+          <form action="{{ url_for('leave_circle') }}" method="POST"
+                onsubmit="return confirm('Leave this Sound Circle? You can rejoin later with the invite code.');">
+            <input type="hidden" name="circle_id" value="{{ circle.id }}">
+            <button type="submit" class="btn ghost danger sm equal">Leave Circle</button>
+          </form>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
   <!-- MEMBERS -->
   <section class="card">
@@ -78,7 +101,7 @@
   {% if testing_mode %}
     <section class="card">
       <div class="row" style="justify-content: space-between; align-items: baseline;">
-        <h2 style="h2-tight;">Submitted Vibes (Testing Mode Only)</h2>
+        <h2 class="h2-tight">Submitted Vibes (Testing Mode Only)</h2>
       </div>
 
       {% if submissions %}
@@ -120,7 +143,7 @@
       </div>
     
       {% if previous_submissions %}
-        <div class="table-viewport" style="margin-top:10px;">
+        <div class="table-viewport mt-10">
           <table class="table table--compact">
             <thead>
               <tr>
@@ -135,7 +158,7 @@
                 <tr>
                   <td class="actions-cell">
                       {% if submission.submitter_id != user_id or testing_mode %}
-                        <form action="{{ url_for('submit_feedback') }}" method="POST" class="row">
+                        <form action="{{ url_for('submit_feedback') }}" method="POST" class="action-row">
                           <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
                           <button type="submit" name="feedback" value="like"
                                   class="icon-button sm {% if submission.user_feedback == 'like' %}active{% endif %}"
@@ -161,9 +184,9 @@
       {% endif %}
     </section>
 
-  <div class="row" style="justify-content:flex-start;">
-    <a class="btn ghost" href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
-  </div>
+    <div class="row" style="justify-content:flex-start;">
+      <a class="btn link" href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
+    </div>
 
   {% if testing_mode %}
     <p class="subtle">🧪 Testing Mode Enabled — showing submissions regardless of deadline.</p>
@@ -202,4 +225,35 @@
       }
     </script>
   {% endif %}
+  <script>
+      function copyInviteCode() {
+        const el = document.getElementById('invite-code');
+        if (!el) return;
+        const text = (el.textContent || el.innerText || '').trim();
+    
+        const flash = () => {
+          el.classList.add('flash');
+          setTimeout(() => el.classList.remove('flash'), 900);
+        };
+    
+        const fallback = () => {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta);
+          flash();
+        };
+    
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(flash).catch(fallback);
+        } else {
+          fallback();
+        }
+      }
+  </script>
 {% endblock %}
