@@ -1,90 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Choose Your VibeDrop Username</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: #121212;
-            color: #FFFFFF;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
+{% extends "base.html" %}
+{% block title %}Choose Your VibeDrop Username{% endblock %}
 
-        h2 {
-            font-size: 1.8em;
-            margin-bottom: 30px;
-            color: #BB86FC;
-        }
+{% block extra_css %}
+<style>
+  /* Page-local centering for the auth card */
+  .auth-wrap{
+    min-height: calc(100vh - 120px); /* accounts for base padding + sidebar */
+    display: grid;
+    place-items: center;
+  }
+  .auth-card{
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .helper{
+    color: var(--muted);
+    font-size: .95rem;
+    margin-top: 6px;
+  }
+  .w-100{ width:100%; } /* page-local utility so button can span full width */
+</style>
+{% endblock %}
 
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            background-color: #1E1E1E;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 0 10px rgba(187, 134, 252, 0.2);
-            width: 90vw;
-            max-width: 400px; 
-        }
+{% block content %}
 
-        label {
-            font-size: 1em;
-            color: #CCCCCC;
-        }
+<div class="auth-wrap">
+  <section class="card auth-card">
+    <div class="stack">
+      <div class="topbar" style="margin-bottom:6px;">
+        <h1 class="page-title" style="font-size:1.6rem; margin:0;">🎧 Create Your VibeDrop Account</h1>
+      </div>
 
-        input[type="text"] {
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            background-color: #2A2A2A;
-            color: #FFFFFF;
-            font-size: 1em;
-            width: 100%;
-        }
+      <form method="POST" class="stack" novalidate>
+        <div>
+          <label for="vibedrop_username">VibeDrop Username</label>
+          <input
+            id="vibedrop_username"
+            name="vibedrop_username"
+            type="text"
+            class="form-control"
+            required
+            minlength="3"
+            maxlength="24"
+            pattern="^[A-Za-z0-9_\.]+$"
+            placeholder="e.g., vibevoyager"
+            aria-describedby="username_help">
+          <div id="username_help" class="helper">
+            3–24 chars • letters, numbers, underscores, or dots.
+          </div>
+        </div>
 
-        button {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 6px;
-            background-color: #BB86FC;
-            color: #000000;
-            font-weight: bold;
-            font-size: 1em;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out;
-            width: 100%;
-        }
+        <button type="submit" class="btn sm w-100">Save Username</button>
+      </form>
+    </div>
+  </section>
+</div>
 
-        button:hover {
-            background-color: #9C6FFB;
-        }
-        
-        @media (max-width: 400px) {
-            h2 {
-                font-size: 1.5em;
-            }
-
-            label, input, button {
-                font-size: 0.95em;
-            }
-        }
-    </style>
-</head>
-<body>
-    <h2>🎧 Create Your VibeDrop Account</h2>
-    <form method="POST">
-        <label for="vibedrop_username">VibeDrop Username:</label>
-        <input type="text" name="vibedrop_username" required>
-        <button type="submit">Save</button>
-    </form>
-</body>
-</html>
+{% endblock %}
