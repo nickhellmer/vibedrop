@@ -65,15 +65,15 @@
     </section>
 
   <!-- MEMBERS -->
-  <section class="card">
+  <section class="card flex">
     <h2 class="h2-tight">Members</h2>
     {% if members and members|length > 0 %}
-      <div class="table-viewport">
-        <table class="table table--compact">
+      <div class="table-viewport flex grow" style="max-height: calc((100vh - 260px) / 2);">
+        <table class="table table--compact sortable">
           <thead>
             <tr>
-              <th>Username</th>
-              <th class="col-narrow">Submitted This Cycle?</th>
+              <th data-type="text">Username</th>
+              <th class="col-narrow" data-type="text">Submitted This Cycle?</th>
             </tr>
           </thead>
           <tbody>
@@ -105,8 +105,8 @@
       </div>
 
       {% if submissions %}
-        <div class="table-viewport">
-          <table class="table table--compact">
+        <div class="table-viewport flex grow" style="max-height: calc((100vh - 260px) / 3);">
+          <table class="table table--compact sortable">
             <thead>
               <tr>
                 <th>Vibe Name</th>
@@ -131,10 +131,8 @@
     </section>
   {% endif %}
 
-
-
     <!-- FRESH FROM THE DROP (rate last finalized cycle) -->
-    <section class="card">
+    <section class="card flex">
       <div class="row" style="justify-content: space-between; align-items: baseline;">
         <h2 class="h2-tight">Fresh From the Drop</h2>
         {% if previous_submissions %}
@@ -143,37 +141,40 @@
       </div>
     
       {% if previous_submissions %}
-        <div class="table-viewport mt-10">
-          <table class="table table--compact">
+        <div class="table-viewport flex grow mt-10" style="max-height: calc((100vh - 260px) / 2);">
+          <table class="table table--compact sortable">
             <thead>
               <tr>
                 <th class="col-narrow">Feedback</th>
-                <th>Vibe Name</th>
-                <th>Vibe Artist</th>
-                <th class="col-narrow">Submitted On</th>
+                <th data-type="text">Vibe Name</th>
+                <th data-type="text">Vibe Artist</th>
+                <th class="col-narrow" data-type="date">Submitted On</th>
               </tr>
             </thead>
             <tbody>
               {% for submission in previous_submissions %}
                 <tr>
                   <td class="actions-cell">
-                      {% if submission.submitter_id != user_id or testing_mode %}
-                        <form action="{{ url_for('submit_feedback') }}" method="POST" class="action-row">
-                          <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
-                          <button type="submit" name="feedback" value="like"
-                                  class="icon-button sm {% if submission.user_feedback == 'like' %}active{% endif %}"
-                                  title="Like" aria-label="Like">👍</button>
-                          <button type="submit" name="feedback" value="dislike"
-                                  class="icon-button sm {% if submission.user_feedback == 'dislike' %}active{% endif %}"
-                                  title="Dislike" aria-label="Dislike">👎</button>
-                        </form>
-                      {% else %}
-                        <span class="subtle">—</span>
-                      {% endif %}
+                    {% if submission.submitter_id != user_id or testing_mode %}
+                      <form action="{{ url_for('submit_feedback') }}" method="POST" class="action-row">
+                        <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
+                        <button type="submit" name="feedback" value="like"
+                                class="icon-button sm {% if submission.user_feedback == 'like' %}active{% endif %}"
+                                title="Like" aria-label="Like">👍</button>
+                        <button type="submit" name="feedback" value="dislike"
+                                class="icon-button sm {% if submission.user_feedback == 'dislike' %}active{% endif %}"
+                                title="Dislike" aria-label="Dislike">👎</button>
+                      </form>
+                    {% else %}
+                      <span class="subtle">—</span>
+                    {% endif %}
                   </td>
                   <td><span class="truncate">{{ submission.track_name or "Unknown Title" }}</span></td>
                   <td><span class="truncate">{{ submission.track_artist or "Unknown Artist" }}</span></td>
-                  <td class="nowrap">{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y %I:%M %p') }}</td>
+                  <td class="nowrap"
+                      data-sort="{{ submission.submitted_at.isoformat() if submission.submitted_at else '' }}">
+                    {{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y %I:%M %p') }}
+                  </td>
                 </tr>
               {% endfor %}
             </tbody>

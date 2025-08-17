@@ -121,6 +121,7 @@
     }
     .action-row{ display:flex; align-items:center; gap:6px; } /* Small action row: avoid the larger .row gap */
     .mt-10{ margin-top:10px; } /* Spacing utility between items (e.g., applied 10px spacing between a button and a table when called in the html file */
+    .note {font-size: .85rem; color: var(--muted); font-style: italic;} /* Subtle note text (smaller, italic, muted) */
 
     /* ================================
        Buttons
@@ -185,46 +186,38 @@
     /* ================================
        Tables
     ===================================*/
-    table.table{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      background:#141414;
+    table.table{width:100%; border-collapse:separate; border-spacing:0; background:#141414 }
+    /* Global table styling */
+    .table th, .table td { 
+        padding: 6px 10px;         /* table row top/bottom padding: 6px, horizontal: 10px */
+        vertical-align: middle;    /* Vertical centering across all cells */
     }
-    /* A scrollable viewport for tables (vertical + horizontal) */
-    .table-viewport{
+    .table-viewport{                     /* A scrollable viewport for tables (vertical + horizontal) */
       position: relative;
-      max-height: 420px;           /* desktop vertical window */
-      overflow: auto;              /* both axes */
+      max-height: 420px;                 /* desktop vertical window */
+      overflow: auto;                    /* both axes */
       border-radius: 12px;
-      /* keep same background feel as .table */
       background:#141414;
       border:1px solid var(--border);
       -webkit-overflow-scrolling: touch; /* iOS sticky friendliness */
     }
     .table-viewport .table{ margin:0; }   /* prevent extra spacing */
-    .table thead th{
-      background:#181818; 
-      color:var(--muted);
-      font-weight:600; 
-      text-align:left; 
-      padding:12px 14px; 
-      border-bottom:1px solid var(--border); /* subtle divider right under the sticky header */
-      position: sticky; top: 0; z-index: 1; /* sticky behavior */
+    .table thead th{                           /* Header (reduce from 12/14) */
+      background:#181818; color:var(--muted);
+      font-weight:600; text-align:left; 
+      padding:6px 10px; 
+      border-bottom:1px solid var(--border);   /* subtle divider right under the sticky header */
+      position: sticky; top: 0; z-index: 1;    /* sticky behavior */
     }
-    .table tbody td{
-      padding:12px 14px; border-top:1px solid var(--border);
-    }
+    .table tbody td{border-top:1px solid var(--border) }
     .table tbody tr:hover{ background:#161616 }
     .col-narrow{ width:1%; white-space:nowrap }
     .col-wide{ width:40% }
     .actions-cell{ display:flex; align-items:center; justify-content:center; gap:8px }
     .nowrap{ white-space:nowrap; }
     /* Slightly smaller font + tighter row padding */
-    .table--compact thead th{ padding:8px 10px; font-size:.95rem; }
-    .table--compact tbody td{ padding:8px 10px; font-size:.95rem; }
-    /* Vertical centering across all cells */
-    .table th, .table td { vertical-align: middle; }
+    .table--compact thead th{ padding:4px 8px; font-size:.95rem; }
+    .table--compact tbody td{ padding:4px 8px; font-size:.95rem; }
     /* Single-line truncate with ellipsis */
     .truncate{
       display:inline-block;
@@ -232,6 +225,23 @@
       overflow:hidden;
       text-overflow:ellipsis;
       white-space:nowrap;
+    }
+    /* Make sortable headers look clickable */
+    .table.sortable thead th { cursor: pointer; user-select: none; }
+    .table.sortable thead th .sort-ind { opacity:.55; margin-left:6px; font-size:.9em; }
+    .table.sortable thead th.active .sort-ind { opacity:1; }
+
+    /* ================================
+       Responsive/adaptive Table and Card Height Utilities
+    ===================================*/
+    .card.flex {display: flex; flex-direction: column }    /* Make a card behave like a vertical flex layout */
+    .grow {flex: 1 1 auto }    /* A child that should take the remaining space inside a flex card */
+    /* Table viewport that flexes to fill space within a flex card */
+    .table-viewport.flex {
+      flex: 1 1 auto;
+      min-height: 220px;                 /* floor so it never collapses */
+      max-height: calc(100vh - 260px);   /* let flex control height */
+      overflow: auto;                    /* scroll only if needed */
     }
 
     /* ================================
@@ -305,15 +315,16 @@
       .btn{ padding:10px 14px; font-size:.95rem }
       .btn.lg{ padding:12px 18px; font-size:1rem }
       .icon-button{ width:36px; height:36px }
-      .table-viewport{ max-height: 50vh; }  /* taller window on phones */
+      .table-viewport{ max-height: 50vh; }           /* taller window on phones */
+      .table-viewport.flex { min-height: 180px; }    /* minimum table window on phones */
       .form-row, .form-row.cols-3{ grid-template-columns:1fr }
       .actions-cell{ gap:6px }
-      .truncate{ max-width: 220px; }           /* shorter line on mobile */
+      .truncate{ max-width: 220px; }                 /* shorter line on mobile */
       .table thead th{ font-size: .95rem; }
       .table tbody td{ font-size: .95rem; }
-      .meta-grid{ grid-template-columns: 1fr 1fr; } /* auto wraps to 1 per row if too tight */
+      .meta-grid{ grid-template-columns: 1fr 1fr; }  /* auto wraps to 1 per row if too tight */
       .row { gap:10px; } /* was 12px */
-      .btn.equal{ min-width:140px; } /* shrink equal width for phones */
+      .btn.equal{ min-width:140px; }                 /* shrink equal width for phones */
     }
 
 
@@ -353,6 +364,73 @@
         setTimeout(() => flash.remove(), 500);
       });
     }, 4000);
+  </script>
+
+  <script>
+    // Generic table sorter: add class="sortable" to any .table and data-type on its THs.
+    // data-type: "text" | "number" | "date". Cells can provide data-sort on TD for precise values.
+    (function(){
+      function getCellVal(td, type) {
+        const v = td.getAttribute('data-sort') ?? td.textContent.trim();
+        if (type === 'number') return parseFloat(v.replace(/[^0-9.\-]/g,'')) || 0;
+        if (type === 'date')   return Date.parse(v) || 0;
+        return v.toLowerCase();
+      }
+      function sortTable(table, colIdx, type, dir){
+        const tbody = table.tBodies[0];
+        const rows = Array.from(tbody.rows);
+        rows.sort((a,b)=>{
+          const va = getCellVal(a.cells[colIdx], type);
+          const vb = getCellVal(b.cells[colIdx], type);
+          if (va < vb) return dir==='asc' ? -1 : 1;
+          if (va > vb) return dir==='asc' ? 1 : -1;
+          return 0;
+        });
+        rows.forEach(r=>tbody.appendChild(r));
+      }
+      function initSortable(table){
+        const ths = Array.from(table.tHead?.rows[0]?.cells ?? []);
+        ths.forEach((th, i)=>{
+          const type = th.getAttribute('data-type') || 'text';
+          let dir = 'asc';
+          // insert simple indicator if not present
+          if (!th.querySelector('.sort-ind')){
+            const s = document.createElement('span');
+            s.className = 'sort-ind';
+            s.textContent = '↕';
+            th.appendChild(s);
+          }
+          th.addEventListener('click', ()=>{
+            ths.forEach(x=>x.classList.remove('active'));
+            th.classList.add('active');
+            sortTable(table, i, type, dir);
+            // toggle indicator glyph
+            th.querySelector('.sort-ind').textContent = (dir==='asc'?'↑':'↓');
+            dir = (dir==='asc' ? 'desc' : 'asc');
+          });
+        });
+      }
+      document.addEventListener('DOMContentLoaded', ()=>{
+        document.querySelectorAll('table.table.sortable').forEach(initSortable);
+        // Humanize any "lifetime" cells (data-created=ISO)
+        document.querySelectorAll('[data-created]').forEach(td=>{
+          const iso = td.getAttribute('data-created');
+          if(!iso) return;
+          const t = Date.parse(iso);
+          if(!t) return;
+          const ms = Date.now() - t;
+          const day = 86400000, week = 7*day, month = 30*day, year = 365*day;
+          let text;
+          if (ms < 14*day)      text = Math.max(1, Math.round(ms/day)) + ' day'   + (ms>=2*day?'s':'');
+          else if (ms < 9*week) text = Math.round(ms/week)             + ' week'  + (ms>=2*week?'s':'');
+          else if (ms < 24*month)text= Math.round(ms/month)            + ' month' + (ms>=2*month?'s':'');
+          else                   text = Math.round(ms/year)             + ' year'  + (ms>=2*year?'s':'');
+          td.textContent = text;
+          // Provide sort value as timestamp
+          td.setAttribute('data-sort', String(t));
+        });
+      });
+    })();
   </script>
 
   {% block extra_js %}{% endblock %}

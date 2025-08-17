@@ -2,195 +2,80 @@
 {% block title %}VibeDrop Dashboard{% endblock %}
 
 {% block content %}
-<style>
-    h1 {
-        font-size: 2.5rem;
-        font-weight: 600;
-        margin-bottom: 10px;
-        color: #7B4EFF;
-    }
-    p {
-        font-size: 1.2rem;
-        color: #CCCCCC;
-        margin-bottom: 30px;
-    }
-    h2 {
-        font-size: 1.8rem;
-        color: #FFFFFF;
-        margin-bottom: 15px;
-    }
-    ul {
-        list-style: none;
-        padding: 0;
-        margin-bottom: 30px;
-    }
-    li {
-        margin: 10px 0;
-    }
-    a {
-        color: #BB86FC;
-        text-decoration: none;
-        font-weight: 600;
-    }
-    a:hover {
-        text-decoration: underline;
-    }
-    button {
-        padding: 12px 20px;
-        font-size: 1rem;
-        font-weight: 600;
-        background-color: #7B4EFF;
-        color: #FFFFFF;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.2s ease-in-out;
-    }
-    button:hover {
-        background-color: #693BDA;
-    }
-    form {
-        margin-top: 30px;
-    }
-    .monogram {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        width: 40px;
-        height: 40px;
-    }
-    .monogram span {
-        font-size: 40px;
-        position: absolute;
-        line-height: 1;
-        -webkit-text-stroke: 1.5px #7B4EFF;
-        color: #FFFFFF;
-    }
-    .monogram .v-left {
-        top: -9px;
-        left: 4px;
-        z-index: 2;
-        clip-path: inset(0 12px 0 0);
-    }
-    .monogram .v-right {
-        top: -9px;
-        left: 4px;
-        z-index: 0;
-        clip-path: inset(0 0 0 12px);
-    }
-    .monogram .d {
-        top: 8px;
-        left: 3px;
-        z-index: 1;
-        transform: rotate(18deg);
-        -webkit-text-stroke: 1.5px #FFFFFF;
-        color: #7B4EFF;
-    }
-    
-    @media (max-width: 768px) {
-        h1 {
-            font-size: 2rem;
-            text-align: center;
-        }
-        p, h2 {
-            font-size: 1rem;
-            text-align: center;
-        }
-        table {
-            font-size: 0.8rem;
-            word-break: break-word;
-        }
-        th, td {
-            padding: 6px 4px;
-        }
-        td:last-child {
-            font-size: 0.7rem; /* Shrinks 'Created On' column */
-        }
-        form button {
-            width: auto;
-            padding: 8px 12px;
-            font-size: 0.85rem;
-            margin-top: 12px;
-            border-radius: 6px;
-        }
-        form {
-            margin-top: 20px;
-            text-align: center;
-        }
-    }
-    
-    .nav-link-fixed {
-        position: absolute;
-        top: 28px;
-        right: 40px;
-    }
-    .nav-link-fixed a {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #BB86FC;
-        text-decoration: none;
-    }
-    .nav-link-fixed .divider {
-        display: inline-block;
-        margin: 0 10px;
-        color: #888;
-    }
-    .nav-link-fixed a:hover {
-        text-decoration: underline;
-    }
-</style>
 
-<div class="monogram">
-    <span class="v-left">V</span>
-    <span class="d">D</span>
-    <span class="v-right">V</span>
+<!-- Page title -->
+<div class="topbar">
+  <h1 class="page-title">🎧 Welcome, {{ user.vibedrop_username }}!</h1>
 </div>
 
-<h1>🎧 Welcome, {{ user.vibedrop_username }}!</h1>
+<!-- Drop Cred card -->
+<section class="card">
+  <div class="stat">
+    <div class="stat-label">Drop Cred</div>
+    <div class="stat-value">{{ drop_cred }}</div>
+    <div class="note">Scale 1–10 • Phase 1 (MVP)</div>
+  </div>
+</section>
 
-<div style="background:#1E1E1E;border-radius:16px;padding:16px 18px;margin:16px 0;display:flex;flex-direction:column;gap:6px;">
-  <div style="font-size:14px;letter-spacing:0.4px;color:#AAAAAA;">Drop Cred</div>
-  <div style="font-size:36px;font-weight:700;line-height:1;color:#7B4EFF;">
-    {{ drop_cred }}
-  </div>
-  <div style="font-size:12px;color:#9A9A9A;">
-    Likes: {{ drop_cred_likes }} / {{ drop_cred_possible }} • Dislikes: {{ drop_cred_dislikes }}
-  </div>
-  <div style="font-size:11px;color:#6F6F6F;">
-    Scale 1–10 • Phase 1 (MVP)
-  </div>
-</div>
+<!-- Your Sound Circles -->
+<section class="card flex">
+  <h2 class="h2-tight">Your Sound Circles</h2>
 
-<h2>Your Sound Circles</h2>
-<table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
-    <thead>
-        <tr style="border-bottom: 2px solid #7B4EFF;">
-            <th align="left" style="width: 55%;">Circle Name</th>
-            <th align="left" style="width: 20%;">Members</th>
-            <th align="left" style="width: 25%;">Created On</th>
+  <div class="table-viewport flex grow">
+    <table class="table table--compact sortable">
+      <thead>
+        <tr>
+          <th data-type="text">Circle Name</th>
+          <th class="col-narrow" data-type="number">Members</th>
+          <th class="col-narrow" data-type="text">Frequency</th>
+          <th class="col-narrow" data-type="text">Drop Day</th>
+          <th class="col-narrow" data-type="date">Lifetime</th>
         </tr>
-    </thead>
-    <tbody>
+      </thead>
+      <tbody>
         {% for circle in circles %}
-        <tr style="border-bottom: 1px solid #444;">
-            <td>
-                <a href="{{ url_for('circle_dashboard', circle_id=circle.id) }}">
-                    {{ circle.circle_name }}
-                </a>
-            </td>
-            <td>{{ circle.members|length }}</td>
-            <td>{{ circle.created_at|to_est|datetimeformat('%b %d, %Y') if circle.created_at else '—' }}</td>
+        {% set freq = circle.drop_frequency %}
+        {% set drop_display = '-' %}
+        {% if freq == 'Weekly' %}
+          {% set drop_display = circle.drop_day1 %}
+        {% elif freq == 'Biweekly' %}
+          {% set drop_display = circle.drop_day1 ~ ' & ' ~ circle.drop_day2 %}
+        {% elif freq == 'Daily' %}
+          {% set drop_display = '-' %}
+        {% endif %}
+        <tr>
+          <td>
+            <a href="{{ url_for('circle_dashboard', circle_id=circle.id) }}">
+              <span class="truncate">{{ circle.circle_name }}</span>
+            </a>
+          </td>
+
+          <!-- numeric sort via data-sort -->
+          <td class="nowrap" data-sort="{{ circle.members|length }}">{{ circle.members|length }}</td>
+
+          <td class="nowrap">{{ freq }}</td>
+          <td class="nowrap">{{ drop_display }}</td>
+
+          <!-- lifetime: JS will fill text and provide sort key; we pass ISO timestamp -->
+          <td class="nowrap"
+              data-created="{{ circle.created_at.isoformat() if circle.created_at else '' }}">
+            <!-- JS fills this with "X days/weeks/months/years" -->
+          </td>
         </tr>
         {% endfor %}
-    </tbody>
-</table>
+      </tbody>
+    </table>
+  </div>
 
-<form action="{{ url_for('create_circle') }}">
-    <button type="submit">➕ Create Sound Circle</button>
-</form>
-    
-<form action="{{ url_for('join_circle') }}">
-    <button type="submit">🔗 Join Sound Circle</button>
-</form>
+  <!-- Actions -->
+  <div class="row" style="margin-top:12px;">
+    <form action="{{ url_for('create_circle') }}" method="GET">
+      <button type="submit" class="btn sm equal">➕ Create Sound Circle</button>
+    </form>
+    <form action="{{ url_for('join_circle') }}" method="GET">
+      <button type="submit" class="btn sm equal">🔗 Join Sound Circle</button>
+    </form>
+  </div>
+</section>
 
 {% endblock %}
