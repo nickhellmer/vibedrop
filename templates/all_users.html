@@ -1,215 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>All Users — VibeDrop</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      background-color: #121212;
-      color: #FFFFFF;
-      font-family: 'Space Grotesk', sans-serif;
-      margin: 0;
-      padding: 40px;
-    }
+{% extends "base.html" %}
+{% block title %}All Users — VibeDrop{% endblock %}
 
-    h1 {
-      font-size: 2.2rem;
-      font-weight: 600;
-      margin-bottom: 18px;
-      color: #7B4EFF;
-    }
+{% block content %}
 
-    a { color: #BB86FC; text-decoration: none; font-weight: 600; }
-    a:hover { text-decoration: underline; }
+<div class="topbar">
+  <h1 class="page-title">All Users</h1>
+</div>
 
-    .monogram {
-      position: absolute; top: 20px; left: 20px; width: 40px; height: 40px;
-    }
-    .monogram span {
-      font-size: 40px; position: absolute; line-height: 1;
-      -webkit-text-stroke: 1.5px #7B4EFF; color: #FFFFFF;
-    }
-    .monogram .v-left { top: -9px; left: 4px; z-index: 2; clip-path: inset(0 12px 0 0); }
-    .monogram .v-right { top: -9px; left: 4px; z-index: 0; clip-path: inset(0 0 0 12px); }
-    .monogram .d { top: 8px; left: 3px; z-index: 1; transform: rotate(18deg); -webkit-text-stroke: 1.5px #FFFFFF; color: #7B4EFF; }
+<section class="card flex">
+  <h2 class="h2-tight">Community</h2>
 
-    .nav-link-fixed {
-      position: absolute; top: 28px; right: 40px;
-    }
-    .nav-link-fixed a { font-size: 1rem; font-weight: 600; color: #BB86FC; text-decoration: none; }
-    .nav-link-fixed a:hover { text-decoration: underline; }
-    .nav-link-fixed .divider { margin: 0 10px; color: #666; }
-
-    .controls {
-      margin: 8px 0 18px;
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-    }
-    .controls select, .controls button {
-      background: #1C1C1C; color: #FFF; border: 1px solid #333; border-radius: 6px;
-      padding: 8px 10px; font-weight: 600; cursor: pointer;
-    }
-    .controls button:hover { border-color: #555; }
-
-    table { width: 100%; border-collapse: collapse; }
-    thead th {
-      text-align: left; padding: 12px; font-size: 1rem; color: #7B4EFF; border-bottom: 2px solid #7B4EFF;
-      cursor: pointer; user-select: none;
-    }
-    tbody td { padding: 12px; border-bottom: 1px solid #444; font-size: 1.05rem; color: #FFFFFF; }
-    th[data-type="num"] { text-align: left; }
-    th.sort-asc::after { content: " ▲"; }
-    th.sort-desc::after { content: " ▼"; }
-
-    @media (max-width: 768px) {
-      body { padding: 20px; }
-      h1 { font-size: 1.8rem; text-align: center; }
-      .monogram { width: 30px; height: 30px; top: 15px; left: 15px; }
-      .monogram span { font-size: 30px; }
-      .monogram .v-left, .monogram .v-right { top: -6px; left: 3px; }
-      .monogram .d { top: 6px; left: 2px; }
-      .nav-link-fixed { right: 20px; }
-      table { font-size: 0.95rem; }
-    }
-  </style>
-</head>
-<body>
-  <div class="monogram">
-    <span class="v-left">V</span>
-    <span class="d">D</span>
-    <span class="v-right">V</span>
+  <!-- Scrollable, adaptive-height table -->
+  <div class="table-viewport flex grow">
+    <table class="table table--compact sortable" id="users-table">
+      <thead>
+        <tr>
+          <th data-type="text">VibeDrop Username</th>
+          <th class="col-narrow" data-type="number">Drop Cred</th>
+          <th class="col-narrow" data-type="number">Submissions</th>
+          <th class="col-narrow" data-type="number">Days Since Joining</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users_stats %}
+        <tr>
+          <td><span class="truncate">{{ u.vibedrop_username }}</span></td>
+          <td class="nowrap">{{ u.drop_cred or 0 }}</td>
+          <td class="nowrap">{{ u.submission_count or 0 }}</td>
+          <!-- days since joining computed below; keep ISO for calc/sort -->
+          <td class="nowrap" data-joined="{{ (u.created_at|to_est|datetimeformat('%Y-%m-%d')) if u.created_at else '' }}">—</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+</section>
 
-  <div style="position: relative; height: 60px;">
-    <div class="nav-link-fixed">
-      <a href="{{ url_for('welcome') }}">Welcome / How It Works</a>
-      <span class="divider">•</span>
-      <a href="{{ url_for('all_users') }}">All Users</a>
-    </div>
-  </div>
+<!-- Actions -->
+<div class="row" style="margin-top:12px;">
+  <a class="btn link" href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
+</div>
 
-  <h1>All Users</h1>
+{% endblock %}
 
-  <div class="controls">
-    <label for="sort-col" style="opacity:.9;">Sort by:</label>
-    <select id="sort-col">
-      <option value="0">VibeDrop Username</option>
-      <option value="1" selected>Drop Cred</option>
-      <option value="2">Submissions</option>
-      <option value="3">Likes Given</option>
-      <option value="4">Dislikes Given</option>
-      <option value="5">Days Since Joining</option>
-    </select>
+{% block extra_js %}
+<script>
+  // Fill "Days Since Joining" from data-joined and provide sort values.
+  (function(){
+    const table = document.getElementById('users-table');
+    if (!table) return;
 
-    <select id="sort-dir">
-      <option value="desc" selected>Descending</option>
-      <option value="asc">Ascending</option>
-    </select>
+    const today = new Date(); today.setHours(0,0,0,0);
 
-    <button id="apply-sort">Apply</button>
-  </div>
-
-  <table id="users-table">
-    <thead>
-      <tr>
-        <th data-type="text">VibeDrop Username</th>
-        <th data-type="num">Drop Cred</th>
-        <th data-type="num">Submissions</th>
-        <th data-type="num">Likes Given</th>
-        <th data-type="num">Dislikes Given</th>
-        <th data-type="num">Days Since Joining</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for u in users_stats %}
-      <tr>
-        <td>{{ u.vibedrop_username }}</td>
-        <td>{{ u.drop_cred or 0 }}</td>
-        <td>{{ u.submission_count or 0 }}</td>
-        <td>{{ u.likes_given or 0 }}</td>
-        <td>{{ u.dislikes_given or 0 }}</td>
-        <!-- days since joining is computed client-side from data-joined -->
-        <td data-joined="{{ (u.created_at|to_est|datetimeformat('%Y-%m-%d')) if u.created_at else '' }}">—</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <script>
-    // Compute "Days Since Joining" from data-joined (YYYY-MM-DD)
-    function computeDaysSinceJoining() {
-      const cells = document.querySelectorAll('#users-table tbody td[data-joined]');
-      const today = new Date(); today.setHours(0,0,0,0);
-      cells.forEach(cell => {
-        const iso = cell.getAttribute('data-joined');
-        if (!iso) { cell.textContent = '—'; return; }
-        const joined = new Date(iso + 'T00:00:00');
-        if (isNaN(joined)) { cell.textContent = '—'; return; }
-        const diffMs = today - joined;
-        const days = Math.max(0, Math.round(diffMs / 86400000));
-        cell.textContent = days;
-      });
-    }
-
-    function getCellValue(tr, idx, type) {
-      const val = tr.children[idx].textContent.trim();
-      if (type === 'num') return parseFloat(val.replace(/[^0-9.\-]/g, '')) || 0;
-      return val.toLowerCase();
-    }
-
-    function sortTableBy(colIdx, dir, setIndicator=true) {
-      const table = document.getElementById('users-table');
-      const tbody = table.tBodies[0];
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      const ths = table.tHead.rows[0].cells;
-      const type = ths[colIdx].dataset.type || 'text';
-
-      rows.sort((a, b) => {
-        const A = getCellValue(a, colIdx, type);
-        const B = getCellValue(b, colIdx, type);
-        if (A < B) return dir === 'asc' ? -1 : 1;
-        if (A > B) return dir === 'asc' ? 1 : -1;
-        return 0;
-      });
-
-      rows.forEach(r => tbody.appendChild(r));
-
-      // header indicators
-      if (setIndicator) {
-        for (const th of ths) th.classList.remove('sort-asc', 'sort-desc');
-        ths[colIdx].classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
-      }
-    }
-
-    // Controls
-    document.getElementById('apply-sort').addEventListener('click', () => {
-      const col = parseInt(document.getElementById('sort-col').value, 10);
-      const dir = document.getElementById('sort-dir').value;
-      sortTableBy(col, dir, true);
+    table.querySelectorAll('tbody td[data-joined]').forEach(td => {
+      const iso = td.getAttribute('data-joined');
+      if (!iso) { td.textContent = '—'; td.setAttribute('data-sort',''); return; }
+      const joined = new Date(iso + 'T00:00:00');
+      if (isNaN(joined)) { td.textContent = '—'; td.setAttribute('data-sort',''); return; }
+      const days = Math.max(0, Math.round((today - joined) / 86400000));
+      td.textContent = String(days);
+      td.setAttribute('data-sort', String(days)); // plays nice with base sorter
     });
 
-    // Clickable headers
-    document.querySelectorAll('#users-table thead th').forEach((th, idx) => {
-      th.addEventListener('click', () => {
-        const isDesc = th.classList.contains('sort-desc');
-        sortTableBy(idx, isDesc ? 'asc' : 'desc', true);
-        // sync controls
-        document.getElementById('sort-col').value = String(idx);
-        document.getElementById('sort-dir').value = isDesc ? 'asc' : 'desc';
-      });
-    });
-
-    // Init on load: compute days + default sort by Drop Cred (col 1, desc)
-    computeDaysSinceJoining();
-    sortTableBy(1, 'desc', true);
-    document.getElementById('sort-col').value = '1';
-    document.getElementById('sort-dir').value = 'desc';
-  </script>
-
-    <br><br>
-    <a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
-    
-    <br><br>
-</body>
-</html>
+    // Optional: default sort by Drop Cred (2nd column, index 1) desc
+    const ths = table.tHead?.rows[0]?.cells || [];
+    if (ths[1]) ths[1].click(); // first click = asc, do two for desc
+    if (ths[1]) ths[1].click();
+  })();
+</script>
+{% endblock %}
