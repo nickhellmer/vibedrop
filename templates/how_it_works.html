@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}How VibeDrop Works{% endblock %}
+
+{% block extra_css %}
+<style>
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .step{display:flex;gap:12px;align-items:flex-start}
+  .step-idx{width:28px;height:28px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:#171717;border:1px solid var(--border);color:var(--text);font-weight:600;flex:0 0 auto}
+  .step h3{margin:0 0 4px 0;font-size:1.1rem}
+  .step p{margin:0;color:var(--muted);line-height:1.5}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topbar"><h1 class="page-title">How It Works</h1></div>
+<div class="stack">
+  <section class="card"><p class="subtle">Create or join a Sound Circle, submit one track, get a Spotify playlist at drop, then give feedback.</p></section>
+  <section class="card">
+    <h2 class="h2-tight">The Flow</h2>
+    <div class="steps">
+      <div class="step"><span class="step-idx">1</span><div><h3>Connect Spotify</h3><p>Sign in so we can create playlists for you.</p></div></div>
+      <div class="step"><span class="step-idx">2</span><div><h3>Join/Create Circle</h3><p>Use an invite code or start one. Set frequency & drop time.</p></div></div>
+      <div class="step"><span class="step-idx">3</span><div><h3>Drop a Track</h3><p>Submit one song before the deadline (anonymous by default).</p></div></div>
+      <div class="step"><span class="step-idx">4</span><div><h3>Playlist</h3><p>At drop, push the playlist to Spotify.</p></div></div>
+      <div class="step"><span class="step-idx">5</span><div><h3>Feedback</h3><p>Return to VibeDrop to 👍/👎 each track (not your own).</p></div></div>
+      <div class="step"><span class="step-idx">6</span><div><h3>Scores</h3><p>See Drop Cred; Vibe Index is coming soon.</p></div></div>
+      <div class="step"><span class="step-idx">7</span><div><h3>Repeat</h3><p>New cycle starts—drop again next time.</p></div></div>
+    </div>
+  </section>
+  <div class="row">
+    <a class="btn" href="{{ url_for('join_circle') }}">🔗 Join a Circle</a>
+    <a class="btn ghost" href="{{ url_for('create_circle') }}">➕ Create a Circle</a>
+  </div>
+</div>
+{% endblock %}

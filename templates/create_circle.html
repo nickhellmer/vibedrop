@@ -1,241 +1,118 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create a Sound Circle</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;600&display=swap" rel="stylesheet">
-  <script>
-    function updateDropFields() {
-      const frequency = document.getElementById("drop_frequency").value;
-      const day1 = document.getElementById("day1_group");
-      const day2 = document.getElementById("day2_group");
+{% extends "base.html" %}
+{% block title %}Create a Sound Circle{% endblock %}
 
-      if (frequency === "Daily") {
-        day1.style.display = "none";
-        day2.style.display = "none";
-      } else if (frequency === "Weekly") {
-        day1.style.display = "block";
-        day2.style.display = "none";
-      } else if (frequency === "Biweekly") {
-        day1.style.display = "block";
-        day2.style.display = "block";
-      }
+{% block extra_css %}
+<style>
+  /* Page-local: keep the form comfortably narrow on wide screens */
+  .narrow { max-width: 720px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <h1 class="page-title">Create a Sound Circle</h1>
+</div>
+
+<div class="stack">
+  <section class="card narrow">
+    <form method="POST" class="stack" novalidate>
+      <div>
+        <label for="circle_name">Circle Name</label>
+        <input id="circle_name" name="circle_name" type="text" class="form-control" required maxlength="60"
+               placeholder="e.g., Friday Finds, Indie Hour">
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="drop_frequency">Drop Frequency</label>
+          <select id="drop_frequency" name="drop_frequency" class="form-control" required>
+            <option value="">— Select —</option>
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Biweekly">Biweekly</option>
+          </select>
+          <div class="help">Choose how often your Sound Circle drops new vibes.</div>
+        </div>
+
+        <div>
+          <label for="drop_time">Drop Time <span class="subtle">(EST)</span></label>
+          <select id="drop_time" name="drop_time" class="form-control" required>
+            {% for suffix in ['AM','PM'] %}
+              {% for hour in range(1,13) %}
+                <option value="{{ '%02d:00 %s' % (hour, suffix) }}">{{ '%02d:00 %s EST' % (hour, suffix) }}</option>
+              {% endfor %}
+            {% endfor %}
+          </select>
+          <div class="help">All times are stored in EST for now.</div>
+        </div>
+      </div>
+
+      <div id="day1_group" style="display:none;">
+        <label for="drop_day1">Drop Day</label>
+        <select id="drop_day1" name="drop_day1" class="form-control">
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+          <option value="Saturday">Saturday</option>
+          <option value="Sunday">Sunday</option>
+        </select>
+      </div>
+
+      <div id="day2_group" style="display:none;">
+        <label for="drop_day2">Second Drop Day</label>
+        <select id="drop_day2" name="drop_day2" class="form-control">
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+          <option value="Saturday">Saturday</option>
+          <option value="Sunday">Sunday</option>
+        </select>
+        <div class="help">Shown only for Biweekly circles.</div>
+      </div>
+
+      <div class="row" style="margin-top:6px;">
+        <button type="submit" class="btn sm">Create</button>
+      </div>
+    </form>
+  </section>
+  <a class="btn link" href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Show/hide day fields based on frequency selection
+  function updateDropFields() {
+    const frequency = document.getElementById("drop_frequency").value;
+    const day1 = document.getElementById("day1_group");
+    const day2 = document.getElementById("day2_group");
+
+    if (frequency === "Daily") {
+      day1.style.display = "none";
+      day2.style.display = "none";
+    } else if (frequency === "Weekly") {
+      day1.style.display = "block";
+      day2.style.display = "none";
+    } else if (frequency === "Biweekly") {
+      day1.style.display = "block";
+      day2.style.display = "block";
+    } else {
+      day1.style.display = "none";
+      day2.style.display = "none";
     }
-  </script>
-  <style>
-    body {
-      background-color: #121212;
-      color: #FFFFFF;
-      font-family: 'Space Grotesk', sans-serif;
-      margin: 0;
-      padding: 40px;
+  }
+
+  // Initialize state on load + bind change listener
+  document.addEventListener('DOMContentLoaded', function(){
+    const select = document.getElementById("drop_frequency");
+    if (select) {
+      select.addEventListener('change', updateDropFields);
+      updateDropFields(); // run once to set default visibility
     }
-
-    h2 {
-      font-size: 2.2rem;
-      color: #7B4EFF;
-      margin-bottom: 30px;
-    }
-
-    label {
-      display: block;
-      margin: 12px 0 5px;
-      font-weight: 600;
-      color: #CCCCCC;
-    }
-
-    input[type="text"], select {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
-      background-color: #1E1E1E;
-      color: #FFFFFF;
-      font-size: 1rem;
-    }
-
-    button {
-      margin-top: 25px;
-      padding: 12px 20px;
-      font-size: 1rem;
-      font-weight: 600;
-      background-color: #7B4EFF;
-      color: #FFFFFF;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s ease-in-out;
-    }
-
-    button:hover {
-      background-color: #693BDA;
-    }
-
-    .monogram {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      width: 40px;
-      height: 40px;
-    }
-
-    .monogram span {
-      font-size: 40px;
-      position: absolute;
-      line-height: 1;
-      -webkit-text-stroke: 1.5px #7B4EFF;
-      color: #FFFFFF;
-    }
-
-    .monogram .v-left {
-      top: -9px;
-      left: 4px;
-      z-index: 2;
-      clip-path: inset(0 12px 0 0);
-    }
-
-    .monogram .v-right {
-      top: -9px;
-      left: 4px;
-      z-index: 0;
-      clip-path: inset(0 0 0 12px);
-    }
-
-    .monogram .d {
-      top: 8px;
-      left: 3px;
-      z-index: 1;
-      transform: rotate(18deg);
-      -webkit-text-stroke: 1.5px #FFFFFF;
-      color: #7B4EFF;
-    }
-      
-    @media (max-width: 768px) {
-      body {
-        padding: 20px;
-      }
-
-      h2 {
-        font-size: 1.6rem;
-        text-align: center;
-      }
-
-      label {
-        font-size: 0.95rem;
-        margin-top: 10px;
-      }
-
-      input[type="text"], select {
-        font-size: 0.95rem;
-        padding: 8px;
-      }
-
-      button {
-        width: 100%;
-        padding: 14px;
-        font-size: 1rem;
-        margin-top: 20px;
-      }
-
-      .monogram {
-        width: 30px;
-        height: 30px;
-        top: 15px;
-        left: 15px;
-      }
-
-      .monogram span {
-        font-size: 30px;
-      }
-
-      .monogram .v-left,
-      .monogram .v-right {
-        top: -6px;
-        left: 3px;
-      }
-
-      .monogram .d {
-        top: 6px;
-        left: 2px;
-      }
-
-      form {
-        margin-top: 20px;
-      }
-
-      a {
-        font-size: 1rem;
-        display: block;
-        margin-top: 30px;
-        text-align: center;
-        color: #BB86FC;
-        text-decoration: none;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="monogram">
-    <span class="v-left">V</span>
-    <span class="d">D</span>
-    <span class="v-right">V</span>
-  </div>
-
-  <h2>Create a Sound Circle</h2>
-  <form method="POST">
-    <label for="circle_name">Circle Name:</label>
-    <input type="text" id="circle_name" name="circle_name" required>
-
-    <label for="drop_frequency">Drop Frequency:</label>
-    <select id="drop_frequency" name="drop_frequency" onchange="updateDropFields()" required>
-      <option value="">--Select--</option>
-      <option value="Daily">Daily</option>
-      <option value="Weekly">Weekly</option>
-      <option value="Biweekly">Biweekly</option>
-    </select>
-
-    <div id="day1_group" style="display:none;">
-      <label for="drop_day1">Drop Day:</label>
-      <select id="drop_day1" name="drop_day1">
-        <option value="Monday">Monday</option>
-        <option value="Tuesday">Tuesday</option>
-        <option value="Wednesday">Wednesday</option>
-        <option value="Thursday">Thursday</option>
-        <option value="Friday">Friday</option>
-        <option value="Saturday">Saturday</option>
-        <option value="Sunday">Sunday</option>
-      </select>
-    </div>
-
-    <div id="day2_group" style="display:none;">
-      <label for="drop_day2">Second Drop Day:</label>
-      <select id="drop_day2" name="drop_day2">
-        <option value="Monday">Monday</option>
-        <option value="Tuesday">Tuesday</option>
-        <option value="Wednesday">Wednesday</option>
-        <option value="Thursday">Thursday</option>
-        <option value="Friday">Friday</option>
-        <option value="Saturday">Saturday</option>
-        <option value="Sunday">Sunday</option>
-      </select>
-    </div>
-
-    <label for="drop_time">Drop Time (EST):</label>
-    <select id="drop_time" name="drop_time" required>
-      {% for suffix in ['AM', 'PM'] %}
-        {% for hour in range(1, 13) %}
-          <option value="{{ '%02d:00 %s' % (hour, suffix) }}">
-            {{ '%02d:00 %s EST' % (hour, suffix) }}
-          </option>
-        {% endfor %}
-      {% endfor %}
-    </select>
-
-    <button type="submit">Create</button>
-  </form>
-    
-  <br><br>
-  <a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
-</body>
-</html>
+  });
+</script>
+{% endblock %}

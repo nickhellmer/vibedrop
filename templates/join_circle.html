@@ -1,171 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Join a Sound Circle</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@200;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      background-color: #121212;
-      color: #FFFFFF;
-      font-family: 'Space Grotesk', sans-serif;
-      margin: 0;
-      padding: 40px;
-    }
+{% extends "base.html" %}
+{% block title %}Join a Sound Circle{% endblock %}
 
-    h1 {
-      font-size: 2.5rem;
-      font-weight: 600;
-      margin-bottom: 30px;
-      color: #7B4EFF;
-    }
+{% block extra_css %}
+<style>
+  /* Page-scoped: narrow the form a bit for readability */
+  .narrow { max-width: 520px; }
+</style>
+{% endblock %}
 
-    label {
-      display: block;
-      margin: 12px 0 5px;
-      font-weight: 600;
-      color: #CCCCCC;
-    }
+{% block content %}
+<div class="topbar">
+  <h1 class="page-title">Join a Sound Circle</h1>
+</div>
 
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
-      background-color: #1E1E1E;
-      color: #FFFFFF;
-      font-size: 1rem;
-      margin-bottom: 20px;
-    }
+<div class="stack">
 
-    button {
-      padding: 12px 20px;
-      font-size: 1rem;
-      font-weight: 600;
-      background-color: #7B4EFF;
-      color: #FFFFFF;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s ease-in-out;
-    }
+  <section class="card narrow">
+    <p class="subtle" style="margin:0 0 10px;">
+      Paste your invite code below to join a Sound Circle.
+    </p>
 
-    button:hover {
-      background-color: #693BDA;
-    }
+    <form method="POST" class="stack" novalidate>
+      <div>
+        <label for="circle_code">Invite Code</label>
+        <input id="circle_code"
+               name="circle_code"
+               type="text"
+               class="form-control"
+               required
+               placeholder="e.g. KcieU5EX"
+               autofocus>
+        <div class="help">Codes are case-sensitive.</div>
+      </div>
 
-    .monogram {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      width: 40px;
-      height: 40px;
-    }
+      <div class="row" style="margin-top:6px;">
+        <button type="submit" class="btn">🔗 Join Circle</button>
+        <a class="btn ghost" href="{{ url_for('create_circle') }}">➕ Create a Circle</a>
+      </div>
+    </form>
+  </section>
 
-    .monogram span {
-      font-size: 40px;
-      position: absolute;
-      line-height: 1;
-      -webkit-text-stroke: 1.5px #7B4EFF;
-      color: #FFFFFF;
-    }
-
-    .monogram .v-left {
-      top: -9px;
-      left: 4px;
-      z-index: 2;
-      clip-path: inset(0 12px 0 0);
-    }
-
-    .monogram .v-right {
-      top: -9px;
-      left: 4px;
-      z-index: 0;
-      clip-path: inset(0 0 0 12px);
-    }
-
-    .monogram .d {
-      top: 8px;
-      left: 3px;
-      z-index: 1;
-      transform: rotate(18deg);
-      -webkit-text-stroke: 1.5px #FFFFFF;
-      color: #7B4EFF;
-    }
-      
-    @media (max-width: 768px) {
-      body {
-        padding: 20px;
-      }
-
-      h1 {
-        font-size: 1.8rem;
-        text-align: center;
-      }
-
-      label {
-        font-size: 0.95rem;
-      }
-
-      input[type="text"] {
-        font-size: 0.95rem;
-        padding: 10px;
-      }
-
-      button {
-        width: 100%;
-        font-size: 1rem;
-        padding: 14px;
-        margin-top: 15px;
-      }
-
-      .monogram {
-        width: 30px;
-        height: 30px;
-        top: 15px;
-        left: 15px;
-      }
-
-      .monogram span {
-        font-size: 30px;
-      }
-
-      .monogram .v-left,
-      .monogram .v-right {
-        top: -6px;
-        left: 3px;
-      }
-
-      .monogram .d {
-        top: 6px;
-        left: 2px;
-      }
-
-      a {
-        font-size: 0.95rem;
-        display: block;
-        text-align: center;
-        margin-top: 30px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="monogram">
-    <span class="v-left">V</span>
-    <span class="d">D</span>
-    <span class="v-right">V</span>
+  <div class="row">
+    <a class="btn link" href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
   </div>
-
-  <h1>🔗 Join a Sound Circle</h1>
-  <form method="POST">
-    <label for="circle_code">Enter Invite Code:</label>
-    <input type="text" id="circle_code" name="circle_code" required>
-    <button type="submit">Join</button>
-  </form>
-    
-  <br><br>
-  <a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
-</body>
-</html>
+</div>
+{% endblock %}

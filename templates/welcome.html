@@ -1,34 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Welcome to VibeDrop{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-  /* Page-scoped styles for Welcome */
   .welcome-container {
     max-width: 800px;
     margin: 0 auto;
     padding: 0 0 40px 0;
-  }
-  .welcome-container h1, .welcome-container h2 { color: #7B4EFF; }
-  .welcome-container h1 { font-size: 2.5rem; margin-bottom: 10px; }
-  .welcome-container h2 { font-size: 1.8rem; margin-top: 40px; }
-  .welcome-container p { font-size: 1.1rem; line-height: 1.6; color: #CCCCCC; }
-  .welcome-section { margin-bottom: 40px; }
-
-  .code-box {
-    background-color: #1e1e1e;
-    border: 1px solid #7B4EFF;
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 1.2rem;
     text-align: center;
-    margin-top: 10px;
-    font-weight: bold;
   }
+  .welcome-container h1 { font-size: 2.5rem; margin-bottom: 10px; color: #7B4EFF; }
+  .welcome-container h2 { font-size: 1.8rem; margin-top: 40px; color: #7B4EFF; }
+  .welcome-container p { font-size: 1.1rem; line-height: 1.6; color: #CCCCCC; }
+
+  .welcome-section { margin-bottom: 40px; }
 
   .welcome-button {
     display: inline-block;
-    margin-top: 30px;
+    margin-top: 20px;
     padding: 12px 20px;
     background-color: #7B4EFF;
     color: white;
@@ -39,52 +28,46 @@
     text-decoration: none;
   }
   .welcome-button:hover { background-color: #9C72FF; }
-</style>
 
+  .btn.link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 18px;
+    background: transparent;
+    border: 1px solid #7B4EFF;
+    color: #7B4EFF;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+  }
+  .btn.link:hover {
+    background: #7B4EFF;
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="welcome-container">
   <div class="welcome-section">
-    <h1>Welcome to VibeDrop!</h1>
-    <p>You're now part of the VibeDrop community — a new kind of music-sharing app that makes it fun, anonymous, and social to trade songs with your crew.</p>
+    <h1>Welcome to VibeDrop 🎶</h1>
+    <p>I built VibeDrop because I’m constantly discovering new music and wanted an easy way to share the best tracks with my friends. Instead of spamming group chats or juggling playlists, I wanted something fun, anonymous, and social that turns music sharing into a ritual.</p>
+    <p>That’s what VibeDrop is: a space where music discovery feels like an event, and everyone gets their turn to shine.</p>
   </div>
 
   <div class="welcome-section">
-    <h2>What Is VibeDrop?</h2>
-    <p>VibeDrop is a social music-sharing web app where you and your friends can exchange songs anonymously through private groups called <strong>Sound Circles</strong>.</p>
-    <p>At each group's scheduled <strong>Drop Time</strong>, the submitted song list is finalized and can be pushed directly to each user's Spotify account. Members then return to VibeDrop to give feedback on the songs, helping unlock powerful new stats like <strong>Drop Cred</strong> and <strong>Vibe Index</strong> in future updates.</p>
-    <p>Whether you’re trying to flex your taste or just discover bangers from your friends, VibeDrop turns music sharing into a weekly ritual.</p>
+    <h2>Join the Community</h2>
+    <p>You’re now part of a group of people who care about sharing great music. Whether you’re flexing your taste or just looking for fresh finds, VibeDrop is about connecting through sound.</p>
   </div>
 
   <div class="welcome-section">
-    <h2>How to Use VibeDrop</h2>
-    <ol>
-      <li>Create an account and connect your Spotify</li>
-      <li>Join or create a Sound Circle</li>
-      <li>Submit one song before the weekly (or daily) Drop Time</li>
-      <li>Once the Drop happens, hit the <strong>Create Playlist</strong> button to create the playlist on your Spotify</li>
-      <li>Return to VibeDrop to provide feedback on the songs others submitted by selecting the 👍like or 👎dislike buttons</li>
-      <li>COMING SOON - The song feedback (like/dislike) provided by each user will feed new features like <strong>Drop Cred</strong> and <strong>Vibe Index</strong></li>
-    </ol>
-    <p>Your feedback helps shape future features and scores like Drop Cred!</p>
-  </div>
-
-  <!--
-  <div class="welcome-section">
-    <h2>💬 Join the Main Testing Circle</h2>
-    <p>Want to share music with other early testers?</p>
-    <p>Use the code below to join our main test group:</p>
-    <div class="code-box">KcieU5EX</div>
-    <p>This group drops new music every <strong>Friday at 5:00 PM EST</strong>.</p>
-  </div>
-  -->
-
-  <div class="welcome-section">
-    <h2>Testing in Progress</h2>
-    <p>This version of VibeDrop is in active development. You may encounter bugs or unfinished features (like feedback and scoring, webpage crashes, etc.).</p>
-    <p>If you run into issues or have ideas, please reach out! Your feedback is extremely helpful as we improve the app.</p>
+    <h2>What’s Next?</h2>
+    <p>Head to your dashboard to explore Sound Circles you’ve joined or create a new one with friends. Each cycle ends with a Drop — where everyone’s submissions come together in one playlist for all to enjoy.</p>
   </div>
 
   <div class="welcome-section">
-    <a href="{{ url_for('dashboard') }}" class="welcome-button">🎧 Go to Your Dashboard</a>
+    <a class="welcome-button" href="{{ url_for('dashboard') }}">🎧 Go to Your Dashboard</a>
+    <a class="btn link" href="{{ url_for('how_it_works') }}">How it works →</a>
   </div>
 </div>
 {% endblock %}
