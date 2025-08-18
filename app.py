@@ -264,6 +264,11 @@ def register():
 def welcome():
     return render_template('welcome.html')
 
+# about page
+@app.route("/how-it-works")
+def how_it_works():
+    return render_template("how_it_works.html")
+
 @app.route('/logout')
 def logout():
     session.clear()
@@ -386,7 +391,7 @@ def circle_dashboard(circle_id):
     # Get circle and members
     circle = SoundCircle.query.get_or_404(circle_id)
     members = circle.members
-    print("[DEBUG] circle drop time right before window calculation:", circle.drop_time)
+    # print("[DEBUG] circle drop time right before window calculation:", circle.drop_time)
     
     # Get drop window (next_drop, most_recent_drop, second_most_recent_drop)
     drop_window = get_cycle_window(circle)
@@ -429,7 +434,7 @@ def circle_dashboard(circle_id):
         try:
             track = sp.track(sub.spotify_track_id)
             track_name = track['name']
-            print("Fetched track name:", track['name'])
+            # print("Fetched track name:", track['name'])
             artist_name = track['artists'][0]['name']
         except Exception:
             track_name = "Unknown Vibe"
@@ -443,7 +448,7 @@ def circle_dashboard(circle_id):
             'submitter_id': sub.user_id,
         }
 
-        print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop)                ### DEBUG PRINTS FOR TIMEZONES ###
+        # print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop)                ### DEBUG PRINTS FOR TIMEZONES ###
         if most_recent_drop <= ts < next_drop:
             enriched_submissions.append(enriched)
         elif second_most_recent_drop <= ts < most_recent_drop:
