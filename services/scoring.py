@@ -13,7 +13,7 @@ TESTING_MODE = True   # Set False in production
 #   1 => likes / possible * 10
 #   2 => (likes - dislikes) / possible * 10
 #   3 => Bayesian smoothing: (likes + α·μ) / (possible + α) * 10
-SCORING_VERSION = 3
+SCORING_VERSION = 4
 
 # Bayesian smoothing hyperparameters (only used if SCORING_VERSION=3)
 BAYESIAN_ALPHA = 5    # prior strength
