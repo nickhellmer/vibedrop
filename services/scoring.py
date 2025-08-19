@@ -91,23 +91,21 @@ def _global_prior_mean() -> float:
         return BAYESIAN_PRIOR_MEAN
     return total_likes / total_possible
 
-def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int, total_submissions: int, score_version: int) -> tuple[float, dict]:
-    if total_possible <= 0:
-        return 0.0, {"formula": "n/a (no possible votes)"}
+def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int,
+                   total_submissions: int, score_version: int) -> tuple[float, dict]:
     if score_version == 1:
-        raw = (total_likes / total_possible) * 10.0
+        raw = (total_likes / total_possible) * 10.0 if total_possible > 0 else 0.0
         params = {"formula": "likes / possible * 10"}
+
     elif score_version == 2:
-        raw = ((total_likes - total_dislikes) / total_possible) * 10.0
+        raw = ((total_likes - total_dislikes) / total_possible) * 10.0 if total_possible > 0 else 0.0
         params = {"formula": "(likes - dislikes) / possible * 10"}
+
     elif score_version == 3:
         mu = _global_prior_mean()
-        raw = ((total_likes + BAYESIAN_ALPHA * mu) / (total_possible + BAYESIAN_ALPHA)) * 10.0
-        params = {
-            "formula": "(likes + α·μ) / (possible + α) * 10",
-            "alpha": BAYESIAN_ALPHA,
-            "mu": round(mu, 4)
-        }
+        raw = ((total_likes + BAYESIAN_ALPHA * mu) / (total_possible + BAYESIAN_ALPHA)) * 10.0 if total_possible > 0 else 0.0
+        params = {"formula": "(likes + α·μ) / (possible + α) * 10", "alpha": BAYESIAN_ALPHA, "mu": round(mu, 4)}
+
     elif score_version == 4:
         # v4B = v3 + participation boost
         import math
@@ -123,9 +121,11 @@ def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int, t
             "base_v3": round(base, 3),
             "submissions": int(total_submissions),
         }
+
     else:
         raise ValueError(f"Unknown SCORING_VERSION: {score_version}")
-    score = max(0.0, min(10.0, raw))  # clamp to [0, 10]
+
+    score = max(0.0, min(10.0, raw))  # clamp to [0,10]
     return round(score, 1), params
 
 def compute_drop_cred(user_id: int, score_version: int | None = None) -> dict:
@@ -133,10 +133,12 @@ def compute_drop_cred(user_id: int, score_version: int | None = None) -> dict:
     total_likes, total_dislikes = _likes_and_dislikes_for_user(user_id)
     total_possible = _total_possible_for_user(user_id)
     total_submissions = db.session.query(func.count(Submission.id))\
-                              .filter(Submission.user_id == user_id)\
-                              .scalar() or 0
-    
-    drop_cred_score, params = _apply_formula(total_likes, total_dislikes, total_possible, total_submissions, version)
+                                  .filter(Submission.user_id == user_id)\
+                                  .scalar() or 0
+    drop_cred_score, params = _apply_formula(
+        total_likes, total_dislikes, total_possible, total_submissions, version
+    )
+    params["total_submissions"] = int(total_submissions)
     params["possible_method"] = "members_including_self" if TESTING_MODE else "members_minus_self"
     params["version"] = version
     return {
