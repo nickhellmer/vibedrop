@@ -18,6 +18,13 @@ SCORING_VERSION = 3
 # Bayesian smoothing hyperparameters (only used if SCORING_VERSION=3)
 BAYESIAN_ALPHA = 5    # prior strength
 BAYESIAN_PRIOR_MEAN = 0.6  # default prior mean if no global data
+
+# v3 prior knobs (already present)
+BAYESIAN_ALPHA = 5
+BAYESIAN_PRIOR_MEAN = 0.6
+
+# v4B participation boost
+V4_BETA = 0.5  # try 0.4–0.7
 # ---------------------------------------------------------------------------
 
 
@@ -84,7 +91,7 @@ def _global_prior_mean() -> float:
         return BAYESIAN_PRIOR_MEAN
     return total_likes / total_possible
 
-def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int, score_version: int) -> tuple[float, dict]:
+def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int, total_submissions: int, score_version: int) -> tuple[float, dict]:
     if total_possible <= 0:
         return 0.0, {"formula": "n/a (no possible votes)"}
     if score_version == 1:
@@ -101,6 +108,21 @@ def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int, s
             "alpha": BAYESIAN_ALPHA,
             "mu": round(mu, 4)
         }
+    elif score_version == 4:
+        # v4B = v3 + participation boost
+        import math
+        mu = _global_prior_mean()
+        base = ((total_likes + BAYESIAN_ALPHA * mu) / (total_possible + BAYESIAN_ALPHA)) * 10.0 if total_possible > 0 else 0.0
+        boost = V4_BETA * (0 if total_submissions <= 0 else math.log1p(total_submissions))
+        raw = base + boost
+        params = {
+            "formula": "v3 + beta*log(1+submissions)",
+            "alpha": BAYESIAN_ALPHA,
+            "mu": round(mu, 4),
+            "beta": V4_BETA,
+            "base_v3": round(base, 3),
+            "submissions": int(total_submissions),
+        }
     else:
         raise ValueError(f"Unknown SCORING_VERSION: {score_version}")
     score = max(0.0, min(10.0, raw))  # clamp to [0, 10]
@@ -110,7 +132,11 @@ def compute_drop_cred(user_id: int, score_version: int | None = None) -> dict:
     version = score_version if score_version is not None else SCORING_VERSION
     total_likes, total_dislikes = _likes_and_dislikes_for_user(user_id)
     total_possible = _total_possible_for_user(user_id)
-    drop_cred_score, params = _apply_formula(total_likes, total_dislikes, total_possible, version)
+    total_submissions = db.session.query(func.count(Submission.id))\
+                              .filter(Submission.user_id == user_id)\
+                              .scalar() or 0
+    
+    drop_cred_score, params = _apply_formula(total_likes, total_dislikes, total_possible, total_submissions, version)
     params["possible_method"] = "members_including_self" if TESTING_MODE else "members_minus_self"
     params["version"] = version
     return {
