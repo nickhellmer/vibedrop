@@ -1,6 +1,6 @@
 from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app, jsonify
 from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback, VibeScore, DropCred, Feedback
-from services.scoring import compute_drop_cred
+from services.scoring import compute_drop_cred, snapshot_user_all_versions
 import spotipy
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
 from datetime import datetime, date, time, timedelta
@@ -14,6 +14,7 @@ from functools import wraps
 from sqlalchemy import func, case
 from services.scoring import compute_drop_cred
 from utils.sms import send_email # sms reminders 
+import click # flask CLI route for user drop cred snapshot 
 # from spotipy import Spotify
 # import secrets  # for join codes
 # from flask_sqlalchemy import SQLAlchemy
@@ -968,6 +969,12 @@ def feedback():
         return redirect(url_for('feedback'))
 
     return render_template('feedback.html')
+
+# TEMPORARY ROUTE (TO BE DELETED OR PROTECTED) - Run helper function in services/scoring.py to get a user drop cred snapshot
+@app.route("/admin/snapshot/<int:user_id>")
+def admin_snapshot(user_id):
+    snapshot_user_all_versions(user_id)
+    return f"Snapshotted user {user_id}", 200
 
 if __name__ == "__main__":
     with app.app_context():

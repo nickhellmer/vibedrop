@@ -31,7 +31,6 @@ def _likes_and_dislikes_for_user(user_id: int) -> tuple[int, int]:
     dislikes = base.filter(SongFeedback.feedback == DISLIKE_VALUE).count()
     return likes or 0, dislikes or 0
 
-
 def _total_possible_for_user(user_id: int) -> int:
     subs = (
         db.session.query(Submission.id, Submission.circle_id)
@@ -40,7 +39,6 @@ def _total_possible_for_user(user_id: int) -> int:
     )
     if not subs:
         return 0
-
     circle_ids = {cid for _, cid in subs}
     members_by_circle = dict(
         db.session.query(
@@ -51,15 +49,12 @@ def _total_possible_for_user(user_id: int) -> int:
         .group_by(CircleMembership.circle_id)
         .all()
     )
-
     total_possible = 0
     for _, cid in subs:
         member_count = int(members_by_circle.get(cid, 0) or 0)
         possible_for_drop = member_count if TESTING_MODE else max(0, member_count - 1)
         total_possible += possible_for_drop
-
     return int(total_possible)
-
 
 def _global_prior_mean() -> float:
     """
@@ -85,24 +80,19 @@ def _global_prior_mean() -> float:
             member_count = int(members_by_circle.get(cid, 0) or 0)
             possible_for_drop = member_count if TESTING_MODE else max(0, member_count - 1)
             total_possible += possible_for_drop
-
     if total_possible == 0:
         return BAYESIAN_PRIOR_MEAN
     return total_likes / total_possible
 
-
 def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int, score_version: int) -> tuple[float, dict]:
     if total_possible <= 0:
         return 0.0, {"formula": "n/a (no possible votes)"}
-
     if score_version == 1:
         raw = (total_likes / total_possible) * 10.0
         params = {"formula": "likes / possible * 10"}
-
     elif score_version == 2:
         raw = ((total_likes - total_dislikes) / total_possible) * 10.0
         params = {"formula": "(likes - dislikes) / possible * 10"}
-
     elif score_version == 3:
         mu = _global_prior_mean()
         raw = ((total_likes + BAYESIAN_ALPHA * mu) / (total_possible + BAYESIAN_ALPHA)) * 10.0
@@ -111,24 +101,18 @@ def _apply_formula(total_likes: int, total_dislikes: int, total_possible: int, s
             "alpha": BAYESIAN_ALPHA,
             "mu": round(mu, 4)
         }
-
     else:
         raise ValueError(f"Unknown SCORING_VERSION: {score_version}")
-
     score = max(0.0, min(10.0, raw))  # clamp to [0, 10]
     return round(score, 1), params
 
-
 def compute_drop_cred(user_id: int, score_version: int | None = None) -> dict:
     version = score_version if score_version is not None else SCORING_VERSION
-
     total_likes, total_dislikes = _likes_and_dislikes_for_user(user_id)
     total_possible = _total_possible_for_user(user_id)
-
     drop_cred_score, params = _apply_formula(total_likes, total_dislikes, total_possible, version)
     params["possible_method"] = "members_including_self" if TESTING_MODE else "members_minus_self"
     params["version"] = version
-
     return {
         "user_id": user_id,
         "total_likes": total_likes,
@@ -142,7 +126,6 @@ def compute_drop_cred(user_id: int, score_version: int | None = None) -> dict:
         "window_start": None,
         "window_end": None,
     }
-
 
 def recompute_and_store_drop_cred(user_id: int, score_version: int | None = None, commit: bool = True) -> DropCred:
     data = compute_drop_cred(user_id, score_version=score_version)
@@ -163,3 +146,38 @@ def recompute_and_store_drop_cred(user_id: int, score_version: int | None = None
     if commit:
         db.session.commit()
     return row
+
+# helper function to snapshot all versions for a user
+### Refresh drop_cred table FOR A SINGLE USER based on latest data ###
+    # commit: bool = True => rows will replace and not save history
+    # run for all users in jupyter notebook to refresh for all users
+def snapshot_user_all_versions(user_id: int, versions=(1, 2, 3), commit: bool = True, replace: bool = False):
+    if replace:
+        # wipe existing rows for this user for these versions (lifetime window)
+        db.session.query(DropCred)\
+            .filter(DropCred.user_id == user_id,
+                    DropCred.score_version.in_(versions),
+                    DropCred.window_label == "lifetime")\
+            .delete(synchronize_session=False)
+
+    rows = []
+    for v in versions:
+        data = compute_drop_cred(user_id, score_version=v)
+        row = DropCred(
+            user_id=data["user_id"],
+            total_likes=data["total_likes"],
+            total_dislikes=data["total_dislikes"],
+            total_possible=data["total_possible"],
+            drop_cred_score=data["drop_cred_score"],
+            computed_at=data["computed_at"],
+            score_version=data["score_version"],
+            params=data["params"],
+            window_label=data["window_label"],
+            window_start=data["window_start"],
+            window_end=data["window_end"],
+        )
+        db.session.add(row)
+        rows.append(row)
+    if commit:
+        db.session.commit()
+    return rows
