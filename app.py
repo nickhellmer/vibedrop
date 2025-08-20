@@ -308,6 +308,8 @@ def create_circle():
         drop_day1 = request.form.get('drop_day1')
         drop_day2 = request.form.get('drop_day2')
         drop_time_str = request.form.get('drop_time')
+        if drop_frequency.lower() == "biweekly" and drop_day1 == drop_day2:
+            return "❌ For biweekly circles, please choose two different drop days.", 400
 
         print("drop_time_str when selected",drop_time_str)
         
@@ -350,6 +352,91 @@ def create_circle():
         )
 
     return render_template('create_circle.html')
+
+# edit circle settings - owner only
+@app.route("/circle/<int:circle_id>/edit", methods=["GET", "POST"])
+def edit_circle(circle_id):
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
+    circle = SoundCircle.query.get_or_404(circle_id)
+
+    if circle.creator_id != user.id:
+        flash("Only the circle owner can edit settings.", "danger")
+        return redirect(url_for("circle_dashboard", circle_id=circle_id))
+
+    if request.method == "POST":
+        circle_name = request.form.get('circle_name')
+        drop_frequency = request.form.get('drop_frequency')
+        drop_day1 = request.form.get('drop_day1')
+        drop_day2 = request.form.get('drop_day2')
+        drop_time_str = request.form.get('drop_time')
+
+        try:
+            eastern = pytz.timezone("US/Eastern")
+            time_obj = datetime.strptime(drop_time_str, "%I:%M %p").time()
+            drop_time = eastern.localize(datetime.combine(date.today(), time_obj))
+        except ValueError:
+            flash("Invalid time format. Please use 12-hour format (e.g., 3:00 PM).", "danger")
+            return redirect(url_for("edit_circle", circle_id=circle.id))
+
+        circle.circle_name = circle_name
+        circle.drop_frequency = drop_frequency
+        circle.drop_day1 = drop_day1
+        circle.drop_day2 = drop_day2
+        circle.drop_time = drop_time
+        db.session.commit()
+
+        flash("Circle updated successfully!", "success")
+        return redirect(url_for("circle_dashboard", circle_id=circle.id))
+
+    return render_template("edit_circle.html", circle=circle)
+
+# delete circle - owner only 
+@app.route("/circle/<int:circle_id>/delete", methods=["POST"])
+def delete_circle(circle_id):
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
+    circle = SoundCircle.query.get_or_404(circle_id)
+
+    if circle.creator_id != user.id:
+        flash("Only the owner can delete this circle.", "danger")
+        return redirect(url_for("circle_dashboard", circle_id=circle.id))
+
+    db.session.delete(circle)
+    db.session.commit()
+    flash(f"'{circle.circle_name}' has been deleted.", "success")
+    return redirect(url_for("dashboard"))
+
+# remove member from circle - owner only 
+@app.route("/circle/<int:circle_id>/remove_member/<int:user_id>", methods=["POST"])
+def remove_member(circle_id, user_id):
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    current_user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
+    circle = SoundCircle.query.get_or_404(circle_id)
+
+    if circle.creator_id != current_user.id:
+        flash("Only the owner can remove members.", "danger")
+        return redirect(url_for("circle_dashboard", circle_id=circle.id))
+
+    if user_id == current_user.id:
+        flash("You cannot remove yourself from your own circle.", "warning")
+        return redirect(url_for("circle_dashboard", circle_id=circle.id))
+
+    membership = CircleMembership.query.filter_by(user_id=user_id, circle_id=circle.id).first()
+    if membership:
+        db.session.delete(membership)
+        db.session.commit()
+        flash("Member removed from the circle.", "info")
+    else:
+        flash("Member not found in this circle.", "warning")
+
+    return redirect(url_for("circle_dashboard", circle_id=circle.id))
 
 @app.route('/join-circle', methods=['GET', 'POST'])
 def join_circle():
@@ -863,6 +950,17 @@ def leave_circle():
 
     circle_id = request.form.get('circle_id')
     user_id = User.query.filter_by(spotify_id=session['user']['spotify_id']).first().id
+
+    # Replace SoundCircle with your actual circle model if different
+    circle = SoundCircle.query.get(circle_id)
+    if not circle:
+        flash('Circle not found.', 'error')
+        return redirect(url_for('account_settings'))
+        
+    # Owners cannot leave their own circle
+    if getattr(circle, 'creator_id', None) == user_id:
+        flash('Owners cannot leave their own circle. Delete the circle instead.', 'error')
+        return redirect(url_for('account_settings'))
 
     membership = CircleMembership.query.filter_by(user_id=user_id, circle_id=circle_id).first()
     if membership:

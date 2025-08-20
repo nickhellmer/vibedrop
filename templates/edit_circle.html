@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ circle.circle_name }} - VibeDrop{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <h1 class="page-title">Edit Sound Circle</h1>
+</div>
+
+<form method="POST" class="stack card" style="max-width: 600px;">
+  <label>
+    <span class="label">Circle Name</span>
+    <input type="text" name="circle_name" value="{{ circle.circle_name }}" required>
+  </label>
+
+  <label>
+    <span class="label">Drop Frequency</span>
+    <select name="drop_frequency" id="drop_frequency" required onchange="toggleDays()">
+      <option value="Daily" {{ 'selected' if circle.drop_frequency == 'Daily' }}>Daily</option>
+      <option value="Weekly" {{ 'selected' if circle.drop_frequency == 'Weekly' }}>Weekly</option>
+      <option value="Biweekly" {{ 'selected' if circle.drop_frequency == 'Biweekly' }}>Biweekly</option>
+    </select>
+  </label>
+
+  <label id="day1-label">
+    <span class="label">Drop Day 1</span>
+    <select name="drop_day1">
+      {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+        <option value="{{ day }}" {{ 'selected' if circle.drop_day1 == day }}>{{ day }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label id="day2-label" style="display: none;">
+    <span class="label">Drop Day 2 (Biweekly only)</span>
+    <select name="drop_day2">
+      {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+        <option value="{{ day }}" {{ 'selected' if circle.drop_day2 == day }}>{{ day }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label>
+    <span class="label">Drop Time (EST)</span>
+    <input type="text" name="drop_time" value="{{ circle.drop_time | to_est | datetimeformat('%I:%M %p') }}" required>
+    <small>Format: 3:00 PM</small>
+  </label>
+
+  <div class="row" style="gap: 12px;">
+    <a href="{{ url_for('circle_dashboard', circle_id=circle.id) }}" class="btn link">⬅ Back</a>
+    <button type="submit" class="btn primary">💾 Save Changes</button>
+  </div>
+</form>
+
+<script>
+function toggleDays() {
+  const freq = document.getElementById("drop_frequency").value;
+  document.getElementById("day1-label").style.display = (freq !== "Daily") ? "block" : "none";
+  document.getElementById("day2-label").style.display = (freq === "Biweekly") ? "block" : "none";
+}
+toggleDays();
+</script>
+{% endblock %}

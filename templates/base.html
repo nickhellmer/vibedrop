@@ -139,15 +139,18 @@
     .btn:hover{ background:#6a3fdc }
     .btn:active{ transform:translateY(1px) }
     .btn:disabled{ opacity:.55; cursor:not-allowed }
+    /* Generic ghost button (purple outline, no fill) */
+    .btn.ghost{ background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+    .btn.ghost:hover{ background: rgba(123,78,255,0.08); }
     /* Ghost + Danger (outline red, not filled) */
     .btn.ghost.danger{background: transparent; border: 1px solid var(--danger); border-color: var(--danger); color: var(--danger) }
     .btn.ghost.danger:hover{background: rgba(255,77,79,0.08) }
     /* Small + extra-small sizes for denser layouts */
-    .btn.xs{ padding:7px 10px; font-size:.85rem; border-radius:10px }
+    .btn.xs{ padding:2px 4px; font-size:.75rem; border-radius:10px } /* button that has smaller text */ 
     .btn.sm{ padding:8px 12px; font-size:.9rem; border-radius:10px }
     .btn.lg{ padding:14px 22px; font-size:1.05rem; border-radius:14px }
     /* Equal width utility for side-by-side CTAs */
-    .btn.equal{ min-width:160px; text-align:center }   /* tweak value to taste */
+    .btn.equal{ min-width:160px; min-height: 30px; text-align:center }   /* tweak value to taste */
 
     /* Icon buttons (like/dislike) */
     .icon-button{

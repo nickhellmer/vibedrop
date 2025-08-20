@@ -1,7 +1,32 @@
 {% extends "base.html" %}
 {% block title %}{{ circle.circle_name }} - VibeDrop{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* Tighter ghost-danger for inline, texty actions */
+  .btn.ghost.danger.xs { padding: 2px 4px; font-size: .4rem; }
+  /* Slightly softer hover for subtlety */
+  .btn.ghost.danger.xs:hover { background: rgba(255,77,79,0.06); }
+</style>
+<style>
+  /* Hidden by default */
+  #members-section .owner-remove { 
+    display: none; 
+    margin-left: 8px; 
+  }
+
+  /* When editing is on, reveal remove controls */
+  #members-section.editing .owner-remove {
+    display: inline-block;
+  }
+
+  /* Tiny pill — you can keep your ultra‑small tweak */
+  .btn.ghost.danger.xs { padding: 2px 4px; font-size: .4rem; }
+</style>
+{% endblock %}
+
 {% block content %}
+{% set is_owner = (circle.creator_id == user_id) %}
 
 <div class="topbar">
   <h1 class="page-title">{{ circle.circle_name }}</h1>
@@ -9,7 +34,7 @@
 
 <div class="stack">
 
-    <!-- NEXT DROP / META -->
+    <!-- META CARD: CIRCLE INFO AND ACTIONS -->
     <section class="card">
       <div class="row between">
         <!-- Left: Meta grid -->
@@ -47,25 +72,36 @@
           </div>
         </div>
     
-        <!-- Right: Actions -->
+        <!-- Actions / Buttons -->
         <div class="row">
-          <a class="btn sm equal" href="{{ url_for('submit_song', circle_id=circle.id) }}">🎵 Submit a Vibe</a>
+          <a class="btn sm equal" href="{{ url_for('submit_song', circle_id=circle.id) }}">Submit a Vibe</a>
         
           {% if previous_submissions %}
-            <button type="button" class="btn xs" onclick="createPlaylist()">Create & Open Playlist</button>
+            <button type="button" class="btn xs equal" onclick="createPlaylist()">Create & Open Playlist</button>
           {% endif %}
-        
-          <form action="{{ url_for('leave_circle') }}" method="POST"
-                onsubmit="return confirm('Leave this Sound Circle? You can rejoin later with the invite code.');">
-            <input type="hidden" name="circle_id" value="{{ circle.id }}">
-            <button type="submit" class="btn ghost danger sm equal">Leave Circle</button>
-          </form>
+          {% if is_owner %}
+            <a class="btn ghost sm equal" href="{{ url_for('edit_circle', circle_id=circle.id) }}">Edit Circle</a>
+            <button type="button" class="btn ghost sm equal" id="toggle-edit-members"
+                    aria-pressed="false" aria-controls="members-section">Edit members</button>
+            <form action="{{ url_for('delete_circle', circle_id=circle.id) }}" method="POST"
+                    onsubmit="return confirm('Are you sure you want to delete this Sound Circle? This cannot be undone.');">
+            <button type="submit" class="btn ghost danger sm equal">Delete Circle</button>
+            </form>
+          {% endif %}
+
+          {% if not is_owner %}
+              <form action="{{ url_for('leave_circle') }}" method="POST"
+                    onsubmit="return confirm('Leave this Sound Circle? You can rejoin later with the invite code.');">
+                <input type="hidden" name="circle_id" value="{{ circle.id }}">
+                <button type="submit" class="btn ghost danger sm equal">Leave Circle</button>
+              </form>
+          {% endif %}
         </div>
       </div>
     </section>
 
   <!-- MEMBERS -->
-  <section class="card flex">
+  <section class="card flex" id="members-section">
     <h2 class="h2-tight">Members</h2>
     {% if members and members|length > 0 %}
       <div class="table-viewport flex grow" style="max-height: calc((100vh - 260px) / 2);">
@@ -79,7 +115,17 @@
           <tbody>
             {% for member in members %}
               <tr>
-                <td>{{ member.vibedrop_username }}</td>
+                <td>
+                  {{ member.vibedrop_username }}
+                  {% if is_owner and member.id != user_id %}
+                    <form action="{{ url_for('remove_member', circle_id=circle.id, user_id=member.id) }}" 
+                          method="POST"
+                          class="owner-remove"
+                          onsubmit="return confirm('Remove {{ member.vibedrop_username }} from the Sound Circle?');">
+                      <button type="submit" class="btn ghost danger xs" aria-label="Remove {{ member.vibedrop_username }}">Remove</button>
+                    </form>
+                  {% endif %}
+                </td>
                 <td>
                   {% if member.id in submitted_user_ids %}
                     ✅
@@ -256,5 +302,32 @@
           fallback();
         }
       }
+  </script>
+  <script>
+      (function(){
+        const btn = document.getElementById('toggle-edit-members');
+        const section = document.getElementById('members-section');
+        if (!btn || !section) return;
+    
+        const labels = {
+          off: 'Edit members',
+          on:  'Cancel editing'
+        };
+    
+        function updateUI(editing){
+          section.classList.toggle('editing', editing);
+          btn.setAttribute('aria-pressed', editing ? 'true' : 'false');
+          btn.textContent = editing ? labels.on : labels.off;
+        }
+    
+        let editing = false;
+        btn.addEventListener('click', () => {
+          editing = !editing;
+          updateUI(editing);
+        });
+    
+        // start hidden
+        updateUI(false);
+      })();
   </script>
 {% endblock %}
