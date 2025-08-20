@@ -973,7 +973,7 @@ def feedback():
 # TEMPORARY ROUTE (TO BE DELETED OR PROTECTED) - Run helper function in services/scoring.py to get a user drop cred snapshot
 @app.route("/admin/snapshot/<int:user_id>")
 def admin_snapshot(user_id):
-    snapshot_user_all_versions(user_id)
+    snapshot_user_all_versions(user_id, versions=(1,2,3,4), replace=True, commit=True)
     return f"Snapshotted user {user_id}", 200
 
 if __name__ == "__main__":
