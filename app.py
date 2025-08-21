@@ -362,7 +362,7 @@ def edit_circle(circle_id):
     user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
     circle = SoundCircle.query.get_or_404(circle_id)
 
-    if circle.creator_id != user.id:
+    if circle.creator_id is None or circle.creator_id != user.id:
         flash("Only the circle owner can edit settings.", "danger")
         return redirect(url_for("circle_dashboard", circle_id=circle_id))
 
@@ -402,7 +402,7 @@ def delete_circle(circle_id):
     user = User.query.filter_by(spotify_id=session['user']['spotify_id']).first()
     circle = SoundCircle.query.get_or_404(circle_id)
 
-    if circle.creator_id != user.id:
+    if circle.creator_id is None or circle.creator_id != current_user.id:
         flash("Only the owner can delete this circle.", "danger")
         return redirect(url_for("circle_dashboard", circle_id=circle.id))
 
@@ -959,7 +959,7 @@ def leave_circle():
         return redirect(url_for('account_settings'))
         
     # Owners cannot leave their own circle
-    if getattr(circle, 'creator_id', None) == user_id:
+    if circle.creator_id is not None and circle.creator_id == user_id:
         flash('Owners cannot leave their own circle. Delete the circle instead.', 'error')
         return redirect(url_for('account_settings'))
 

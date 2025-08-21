@@ -33,9 +33,11 @@ class User(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
     drop_cred = db.Column(db.Float, default=5.0)
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
-    circle_memberships = db.relationship('CircleMembership', back_populates='user', cascade='all, delete-orphan')
+    circle_memberships = db.relationship('CircleMembership', back_populates='user', cascade='all, delete-orphan', 
+                                         passive_deletes=True) #* added passive_deletes *#
     sms_notifications = db.Column(db.Boolean, default=False)
     phone_number = db.Column(db.String(20))
+    drop_cred_history = db.relationship("DropCred", back_populates="user", passive_deletes=True) #* added this whole line *#
     
     # helper property to get all Sound Circles this user belongs to
     @property
@@ -56,13 +58,13 @@ class SoundCircle(db.Model):
     drop_day2 = db.Column(db.String(20), nullable=True)
     drop_time = db.Column(DateTime(timezone=True), nullable=False) 
     invite_code = db.Column(db.String(10), unique=True)
-    creator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
-    circle_memberships = db.relationship('CircleMembership', back_populates='circle')
-
-    # Relationships
+    creator_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True) #* added ondelete='SET NULL' and changed nullable to True *#
     creator = db.relationship('User', backref='created_circles')
-    submissions = db.relationship('Submission', backref='circle', cascade='all, delete-orphan')
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    circle_memberships = db.relationship('CircleMembership', back_populates='circle', 
+                                        cascade='all, delete-orphan', passive_deletes=True) #* added cascade and passive_deletes *#
+    submissions = db.relationship('Submission', back_populates='circle', cascade='all, delete-orphan', #* changed form backref to back_populates *#
+                                 passive_deletes=True) #* added passive_deletes *#
     
     # helper property to get all members of this Sound Circle
     @property
@@ -77,8 +79,8 @@ class CircleMembership(db.Model):
     __tablename__ = 'circle_memberships'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circles.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False) #* added ondelete='CASCADE' *#
+    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circles.id', ondelete='CASCADE'), nullable=False) #* added ondelete='CASCADE' *#
     joined_at = db.Column(db.DateTime, nullable=False, default=utcnow)
 
     user = db.relationship('User', back_populates='circle_memberships')
@@ -97,13 +99,14 @@ class Submission(db.Model):
     __tablename__ = 'submissions'
     
     id = db.Column(db.Integer, primary_key=True)
-    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circles.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    circle_id = db.Column(db.Integer, db.ForeignKey('sound_circles.id', ondelete='CASCADE'), nullable=False) #* added ondelete='CASCADE' *#
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False) #* added ondelete='CASCADE' *#
     spotify_track_id = db.Column(db.String(100), nullable=False)
     cycle_date = db.Column(db.Date, nullable=False)
     submitted_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     visible_to_others = db.Column(db.Boolean, default=False)
 
+    circle = db.relationship('SoundCircle', back_populates='submissions') #* added this whole line *#
     user = db.relationship('User', backref='submissions')
     
 # Stores all likes/dislikes on submissions
@@ -111,8 +114,8 @@ class SongFeedback(db.Model):
     __tablename__ = 'song_feedback'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    song_id = db.Column(db.Integer, db.ForeignKey('submissions.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False) #* added ondelete='CASCADE' *#
+    song_id = db.Column(db.Integer, db.ForeignKey('submissions.id', ondelete='CASCADE'), nullable=False) #* added ondelete='CASCADE' *#
     feedback = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -136,7 +139,7 @@ class DropCred(db.Model):
     __tablename__ = "drop_creds"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True) #* added ondelete='CASCADE' *#
 
     # Raw counts used for the score at computation time
     total_likes = db.Column(db.Integer, nullable=False)
@@ -157,7 +160,7 @@ class DropCred(db.Model):
     window_start = db.Column(DateTime(timezone=True), nullable=True)
     window_end = db.Column(DateTime(timezone=True), nullable=True)
 
-    user = db.relationship("User", backref=db.backref("drop_cred_history", lazy="dynamic"))
+    user = db.relationship("User", back_populates="drop_cred_history") #* changed backref to back_populates, also removed lazy="dynamic" *#
 
     __table_args__ = (
         db.Index("ix_drop_creds_user_computed_at", "user_id", "computed_at"),
