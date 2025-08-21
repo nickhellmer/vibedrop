@@ -23,6 +23,26 @@
   /* Tiny pill — you can keep your ultra‑small tweak */
   .btn.ghost.danger.xs { padding: 2px 4px; font-size: .4rem; }
 </style>
+<style>
+  .track-link {
+    color: var(--text);
+    text-decoration: none;
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-link:hover {
+    text-decoration: underline;
+  }
+
+  .track-link .truncate {
+    display: inline-block;
+    vertical-align: middle;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -215,7 +235,15 @@
                       <span class="subtle">—</span>
                     {% endif %}
                   </td>
-                  <td><span class="truncate">{{ submission.track_name or "Unknown Title" }}</span></td>
+                  <td>
+                      {% if submission.spotify_track_id %}
+                        <a href="https://open.spotify.com/track/{{ submission.spotify_track_id }}" class="track-link" target="_blank" rel="noopener noreferrer">
+                          {{ submission.track_name or "Unknown Title" }}
+                        </a>
+                      {% else %}
+                        <span class="truncate">{{ submission.track_name or "Unknown Title" }}</span>
+                      {% endif %}
+                  </td>
                   <td><span class="truncate">{{ submission.track_artist or "Unknown Artist" }}</span></td>
                   <td class="nowrap"
                       data-sort="{{ submission.submitted_at.isoformat() if submission.submitted_at else '' }}">

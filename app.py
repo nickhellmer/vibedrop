@@ -534,6 +534,7 @@ def circle_dashboard(circle_id):
             'submitted_at': ts,
             'submission_id': sub.id,
             'submitter_id': sub.user_id,
+            'spotify_track_id': sub.spotify_track_id,
         }
 
         # print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop)                ### DEBUG PRINTS FOR TIMEZONES ###
