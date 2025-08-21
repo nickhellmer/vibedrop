@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  {% set current_year = current_year or 2025 %}
   <meta charset="UTF-8">
   <title>{% block title %}VibeDrop{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -437,5 +438,15 @@
   </script>
 
   {% block extra_js %}{% endblock %}
+
+  <!-- Site-wide footer -->
+  <footer style="margin-top: 40px; padding: 20px; text-align: center; font-size: 0.9rem; 
+      color: var(--muted); border-top: 1px solid var(--border); background-color: #121212;">
+    <div class="container">
+      <span>&copy; {{ current_year }} VibeDrop</span> &nbsp;|&nbsp;
+      <a href="{{ url_for('privacy') }}">Privacy Policy</a> &nbsp;|&nbsp;
+      <a href="{{ url_for('terms') }}">Terms of Service</a>
+    </div>
+  </footer>
 </body>
 </html>

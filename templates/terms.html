@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Terms of Service - VibeDrop{% endblock %}
+
+{% block content %}
+<div class="stack">
+  <h1 class="page-title">Terms of Service</h1>
+  <p class="note">Last updated: August 20, 2025</p>
+
+  <div class="card stack">
+    <p>These Terms of Service (“Terms”) govern your use of VibeDrop (“we,” “our,” or “us”). By creating an account or using VibeDrop, you agree to these Terms. If you do not agree, please do not use the service.</p>
+
+    <h2 class="h2-tight">1. Eligibility</h2>
+    <p>You must be at least 13 years old and comply with Spotify’s Terms of Use to connect your Spotify account.</p>
+
+    <h2 class="h2-tight">2. Use of VibeDrop</h2>
+    <ul>
+      <li>Use VibeDrop to create Sound Circles, share songs, and give feedback.</li>
+      <li>You are responsible for what you submit and how you interact.</li>
+      <li>Do not misuse the service (e.g., spam, abuse, hacking).</li>
+    </ul>
+
+    <h2 class="h2-tight">3. Spotify Integration</h2>
+    <ul>
+      <li>VibeDrop uses the Spotify API.</li>
+      <li>You agree to Spotify’s Terms of Use and Privacy Policy as part of using our app.</li>
+      <li>If Spotify restricts access, VibeDrop functionality may be limited.</li>
+    </ul>
+
+    <h2 class="h2-tight">4. Privacy</h2>
+    <p>Your use of VibeDrop is also governed by our <a href="{{ url_for('privacy') }}">Privacy Policy</a>.</p>
+
+    <h2 class="h2-tight">5. Disclaimers</h2>
+    <p>VibeDrop is provided “as is” without warranties of any kind. We do not guarantee uptime or bug-free performance.</p>
+
+    <h2 class="h2-tight">6. Limitation of Liability</h2>
+    <p>To the extent permitted by law, VibeDrop and its creators are not liable for any damages resulting from your use of the service.</p>
+
+    <h2 class="h2-tight">7. Termination</h2>
+    <p>We may suspend or delete accounts that violate these Terms. You can delete your account at any time.</p>
+
+    <h2 class="h2-tight">8. Changes to These Terms</h2>
+    <p>We may update these Terms at any time. Changes will be posted here with a new “Last Updated” date.</p>
+  </div>
+</div>
+{% endblock %}

@@ -1074,6 +1074,14 @@ def admin_snapshot(user_id):
     snapshot_user_all_versions(user_id, versions=(1,2,3,4), replace=True, commit=True)
     return f"Snapshotted user {user_id}", 200
 
+### FOOTER LINKS IN BASE.HTML ###
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
