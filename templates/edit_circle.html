@@ -6,57 +6,94 @@
   <h1 class="page-title">Edit Sound Circle</h1>
 </div>
 
-<form method="POST" class="stack card" style="max-width: 600px;">
-  <label>
-    <span class="label">Circle Name</span>
-    <input type="text" name="circle_name" value="{{ circle.circle_name }}" required>
-  </label>
+<section class="card" style="max-width: 720px; margin-inline:auto;">
+  <form method="POST" class="stack" novalidate>
+    <!-- Circle name -->
+    <label>
+      <span class="k">Circle Name</span>
+      <input class="form-control" type="text" name="circle_name" value="{{ circle.circle_name }}" required>
+    </label>
 
-  <label>
-    <span class="label">Drop Frequency</span>
-    <select name="drop_frequency" id="drop_frequency" required onchange="toggleDays()">
-      <option value="Daily" {{ 'selected' if circle.drop_frequency == 'Daily' }}>Daily</option>
-      <option value="Weekly" {{ 'selected' if circle.drop_frequency == 'Weekly' }}>Weekly</option>
-      <option value="Biweekly" {{ 'selected' if circle.drop_frequency == 'Biweekly' }}>Biweekly</option>
-    </select>
-  </label>
+    <!-- Frequency / Time -->
+    <div class="form-row">
+      <div>
+        <label for="drop_frequency">
+          <span class="k">Drop Frequency</span>
+        </label>
+        <select class="form-control" name="drop_frequency" id="drop_frequency" required onchange="toggleDays()">
+          <option value="Daily"   {{ 'selected' if circle.drop_frequency == 'Daily'   }}>Daily</option>
+          <option value="Weekly"  {{ 'selected' if circle.drop_frequency == 'Weekly'  }}>Weekly</option>
+          <option value="Biweekly"{{ 'selected' if circle.drop_frequency == 'Biweekly'}}>Biweekly</option>
+        </select>
+      </div>
 
-  <label id="day1-label">
-    <span class="label">Drop Day 1</span>
-    <select name="drop_day1">
-      {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
-        <option value="{{ day }}" {{ 'selected' if circle.drop_day1 == day }}>{{ day }}</option>
-      {% endfor %}
-    </select>
-  </label>
+      <div>
+        <label for="drop_time">
+          <span class="k">Drop Time (EST)</span>
+        </label>
+        <select class="form-control" id="drop_time" name="drop_time" required>
+          {% set current_time = circle.drop_time | to_est | datetimeformat('%I:00 %p') %}
+          {% for suffix in ['AM', 'PM'] %}
+            {% for hour in range(1, 13) %}
+              {% set opt = '%02d:00 ' % hour ~ suffix %}
+              <option value="{{ opt }}" {{ 'selected' if opt == current_time }}>
+                {{ '%02d:00 ' % hour ~ suffix }} EST
+              </option>
+            {% endfor %}
+          {% endfor %}
+        </select>
+        <div class="note">Times are interpreted in U.S. Eastern Time.</div>
+      </div>
+    </div>
 
-  <label id="day2-label" style="display: none;">
-    <span class="label">Drop Day 2 (Biweekly only)</span>
-    <select name="drop_day2">
-      {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
-        <option value="{{ day }}" {{ 'selected' if circle.drop_day2 == day }}>{{ day }}</option>
-      {% endfor %}
-    </select>
-  </label>
+    <!-- Days (conditionally shown) -->
+    <div id="day1-wrap" style="display:none;">
+      <label for="drop_day1">
+        <span class="k">Drop Day</span>
+      </label>
+      <select class="form-control" name="drop_day1" id="drop_day1">
+        {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+          <option value="{{ day }}" {{ 'selected' if circle.drop_day1 == day }}>{{ day }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <label>
-    <span class="label">Drop Time (EST)</span>
-    <input type="text" name="drop_time" value="{{ circle.drop_time | to_est | datetimeformat('%I:%M %p') }}" required>
-    <small>Format: 3:00 PM</small>
-  </label>
+    <div id="day2-wrap" style="display:none;">
+      <label for="drop_day2">
+        <span class="k">Second Drop Day</span>
+      </label>
+      <select class="form-control" name="drop_day2" id="drop_day2">
+        {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+          <option value="{{ day }}" {{ 'selected' if circle.drop_day2 == day }}>{{ day }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <div class="row" style="gap: 12px;">
-    <a href="{{ url_for('circle_dashboard', circle_id=circle.id) }}" class="btn link">⬅ Back</a>
-    <button type="submit" class="btn primary">💾 Save Changes</button>
-  </div>
-</form>
+    <!-- Actions -->
+    <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px;">
+      <a href="{{ url_for('circle_dashboard', circle_id=circle.id) }}" class="btn ghost sm">⬅️ Cancel</a>
+      <button type="submit" class="btn sm">💾 Save Changes</button>
+    </div>
+  </form>
+</section>
 
 <script>
-function toggleDays() {
-  const freq = document.getElementById("drop_frequency").value;
-  document.getElementById("day1-label").style.display = (freq !== "Daily") ? "block" : "none";
-  document.getElementById("day2-label").style.display = (freq === "Biweekly") ? "block" : "none";
-}
-toggleDays();
+  function toggleDays() {
+    const freq = document.getElementById('drop_frequency').value;
+    const d1 = document.getElementById('day1-wrap');
+    const d2 = document.getElementById('day2-wrap');
+    if (freq === 'Daily') {
+      d1.style.display = 'none';
+      d2.style.display = 'none';
+    } else if (freq === 'Weekly') {
+      d1.style.display = 'block';
+      d2.style.display = 'none';
+    } else { // Biweekly
+      d1.style.display = 'block';
+      d2.style.display = 'block';
+    }
+  }
+  // initialize based on current value
+  toggleDays();
 </script>
 {% endblock %}
