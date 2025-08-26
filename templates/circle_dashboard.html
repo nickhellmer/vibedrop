@@ -289,8 +289,13 @@
             return;
           }
           const data = await response.json();
-          if (data && data.spotify_url) {
-            window.open(data.spotify_url, "_blank", "noopener");
+
+          if (data && data.playlist_url) {
+            // Open the web version of Spotify (works everywhere)
+            window.open(data.playlist_url, "_blank", "noopener");
+          } else if (data && data.playlist_uri) {
+            // Fallback: attempt to open the Spotify app
+            window.location.href = data.playlist_uri;
           } else {
             alert("Playlist created, but no Spotify link returned.");
           }
