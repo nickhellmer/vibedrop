@@ -990,23 +990,27 @@ def send_email_reminders():
     skipped_circles = 0
 
     for circle in eligible_circles:
-        if not circle.drop_time:
+        drop_window = get_cycle_window(circle)
+        if not drop_window:
             print(f"⚠️ Circle '{circle.circle_name}' has no drop_time. Skipping.")
-            continue
-
-        drop_time_est = circle.drop_time.astimezone(tz_est).replace(second=0, microsecond=0)
-        print(f"⏱ Circle '{circle.circle_name}' drop_time: {drop_time_est.strftime('%Y-%m-%d %I:%M %p %Z')}")
-
-        # Only process if drop is later *today*
-        if drop_time_est.date() != now_est.date():
-            print(f"❌ Skipping '{circle.circle_name}' — drop is not today (EST).")
             skipped_circles += 1
             continue
 
-        # Compute time until drop
-        time_diff = drop_time_est - now_est
+        next_drop_utc, _, _ = drop_window
+        # drop_time_est = circle.drop_time.astimezone(tz_est).replace(second=0, microsecond=0)
+        next_drop_est = next_drop_utc.astimezone(tz_est).replace(second=0, microsecond=0)
+        print(f"⏱ Next drop for '{circle.circle_name}': {next_drop_est.strftime('%Y-%m-%d %I:%M %p %Z')}")
+
+        # Only process if the NEXT DROP is later *today* (EST)
+        if next_drop_est.date() != now_est.date():
+            print(f"❌ Skipping '{circle.circle_name}' — next drop is not today (EST).")
+            skipped_circles += 1
+            continue
+
+        # Compute time until next drop
+        time_diff = next_drop_est - now_est
         if time_diff.total_seconds() <= 0:
-            print(f"⏳ Skipping '{circle.circle_name}' — drop has already passed.")
+            print(f"⏳ Skipping '{circle.circle_name}' — next drop has already passed.")
             skipped_circles += 1
             continue
 
@@ -1033,7 +1037,7 @@ def send_email_reminders():
             try:
                 subject = "VibeDrop Reminder"
                 message = f"🎵 Reminder from VibeDrop: {time_str} until drop time for {circle.circle_name}!"
-                send_email(user.email, message, subject)
+                send_email(user.email, message)
                 print(f"✅ Email sent to {user.email}")
                 reminder_count += 1
             except Exception as e:
