@@ -747,9 +747,7 @@ def create_playlist(circle_id):
 
         track_uris = [f"spotify:track:{sub.spotify_track_id}" for sub in previous_submissions if sub.spotify_track_id]
         sp.playlist_add_items(playlist_id=playlist['id'], items=track_uris)
-        # print("✅ Created playlist:", playlist['external_urls']['spotify'], flush=True)
         
-        # return f"✅ Playlist '{playlist_name}' created and added to your Spotify!", 200
         return jsonify({
             "playlist_id": playlist['id'],
             "playlist_uri": f"spotify://playlist/{playlist['id']}",
@@ -983,9 +981,9 @@ def leave_circle():
 
 @app.route('/send-email-reminders')
 def send_email_reminders():
-    now = datetime.utcnow()
+    now_est = utcnow().astimezone(tz_est)
     print("🔍 Running scheduled email reminder check...")
-    print(f"🕒 Current UTC time: {now.strftime('%Y-%m-%d %I:%M %p')}")
+    print(f"🕒 Current EST time: {now_est.strftime('%Y-%m-%d %I:%M %p %Z')}")
 
     eligible_circles = SoundCircle.query.all()
     reminder_count = 0
@@ -996,17 +994,17 @@ def send_email_reminders():
             print(f"⚠️ Circle '{circle.circle_name}' has no drop_time. Skipping.")
             continue
 
-        drop_time = circle.drop_time.replace(second=0, microsecond=0)
-        print(f"⏱ Circle '{circle.circle_name}' drop_time: {drop_time.strftime('%Y-%m-%d %I:%M %p %Z')}")
+        drop_time_est = circle.drop_time.astimezone(tz_est).replace(second=0, microsecond=0)
+        print(f"⏱ Circle '{circle.circle_name}' drop_time: {drop_time_est.strftime('%Y-%m-%d %I:%M %p %Z')}")
 
         # Only process if drop is later *today*
-        if drop_time.date() != now.date():
-            print(f"❌ Skipping '{circle.circle_name}' — drop is not today.")
+        if drop_time_est.date() != now_est.date():
+            print(f"❌ Skipping '{circle.circle_name}' — drop is not today (EST).")
             skipped_circles += 1
             continue
 
         # Compute time until drop
-        time_diff = drop_time - now
+        time_diff = drop_time_est - now_est
         if time_diff.total_seconds() <= 0:
             print(f"⏳ Skipping '{circle.circle_name}' — drop has already passed.")
             skipped_circles += 1
