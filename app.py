@@ -1022,7 +1022,7 @@ def send_email_reminders():
         else:
             time_str = "less than a minute"
 
-        members = [cm.user for cm in circle.memberships if cm.user.email and cm.user.sms_notifications]
+        members = [cm.user for cm in circle.members if cm.user.email and cm.user.sms_notifications]
         if len(members) < 2:
             print(f"🚫 Skipping circle '{circle.circle_name}' — only {len(members)} eligible user(s).")
             continue
