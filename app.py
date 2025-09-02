@@ -12,8 +12,7 @@ import os
 import pytz
 from functools import wraps
 from sqlalchemy import func, case
-from sqlalchemy import and_
-from services.scoring import compute_drop_cred
+from sqlalchemy import or_, and_
 from utils.sms import send_email # sms reminders 
 import click # flask CLI route for user drop cred snapshot 
 # from spotipy import Spotify
@@ -114,6 +113,36 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
     # no future window found (unlikely)
     print("[DEBUG] Unexpected: get_cycle_window() could not determine drop window.")
     return None
+
+# replace drop cred scores directly in drop_creds table when calculated in dashboard route with "compute_drop_cred" call
+def upsert_current_drop_cred(user_id: int, dc: dict) -> None:
+    latest = (DropCred.query
+        .filter(DropCred.user_id == user_id)
+        .filter(or_(DropCred.window_label.is_(None),
+                    DropCred.window_label == 'lifetime'))
+        .order_by(DropCred.computed_at.desc())
+        .first())
+
+    if latest:
+        latest.total_likes     = dc["total_likes"]
+        latest.total_dislikes  = dc["total_dislikes"]
+        latest.total_possible  = dc["total_possible"]
+        latest.drop_cred_score = dc["drop_cred_score"]
+        latest.computed_at     = datetime.utcnow()
+        latest.score_version   = 1
+        latest.params          = None
+    else:
+        db.session.add(DropCred(
+            user_id=user_id,
+            total_likes=dc["total_likes"],
+            total_dislikes=dc["total_dislikes"],
+            total_possible=dc["total_possible"],
+            drop_cred_score=dc["drop_cred_score"],
+            computed_at=datetime.utcnow(),
+            score_version=1,
+            window_label='lifetime',
+        ))
+    db.session.commit()
 
 ### ALL ROUTES ######################
 
@@ -291,7 +320,7 @@ def dashboard():
 
     # compute Drop Cred for the logged-in user
     dc = compute_drop_cred(user.id)  # assumes Flask-Login's current_user
-
+    upsert_current_drop_cred(user.id, dc) # update drop cred score in drop_creds table for the user
     return render_template('dashboard.html',
                             user=user,
                             circles=sound_circles, 
