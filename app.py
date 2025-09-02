@@ -484,22 +484,20 @@ def circle_dashboard(circle_id):
     # ---------------- NEW: compute circle leader from drop_creds ----------------
     member_ids = [m.id for m in members] if members else []
     circle_leader = None
-
+    
     if member_ids:
-        # subquery: latest snapshot per user
         subq = (
             db.session.query(
                 DropCred.user_id.label('uid'),
                 func.max(DropCred.computed_at).label('max_at')
             )
             .filter(DropCred.user_id.in_(member_ids))
-            # (Optional) if you use labeled windows, prefer lifetime:
-            # .filter((DropCred.window_label.is_(None)) | (DropCred.window_label == 'lifetime'))
+            # If you want to prefer lifetime rows when you have labeled windows, uncomment:
+            # .filter(or_(DropCred.window_label.is_(None), DropCred.window_label == 'lifetime'))
             .group_by(DropCred.user_id)
             .subquery()
         )
-
-        # join to fetch the *latest* row per member, then pick the highest score
+    
         latest_rows = (
             db.session.query(User.vibedrop_username, DropCred.drop_cred_score)
             .join(DropCred, DropCred.user_id == User.id)
@@ -507,12 +505,12 @@ def circle_dashboard(circle_id):
             .filter(User.id.in_(member_ids))
             .all()
         )
-
+    
         if latest_rows:
             best = max(latest_rows, key=lambda r: (r.drop_cred_score or 0))
             circle_leader = {
-                "vibedrop_username": best.vibedrop_username,
-                "drop_cred": round(float(best.drop_cred_score or 0), 1),
+                "username": best.vibedrop_username,
+                "score": round(float(best.drop_cred_score or 0), 1),
             }
     # ---------------------------------------------------------------------------
     
@@ -609,6 +607,7 @@ def circle_dashboard(circle_id):
         testing_mode=TESTING_MODE, 
         submitted_user_ids=submitted_user_ids,
         user_id=user_id,
+        circle_leader=circle_leader,
     )
 
 @app.route('/submit_feedback', methods=['POST'])
