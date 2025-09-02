@@ -3,6 +3,8 @@
 
 {% block extra_css %}
 <style>
+    :root{ --bg:#1a1a1a; } /* slightly bluer charcoal to blend with the logo */
+    
     /* Center the hero nicely within base's padding */
       .hero {
         min-height: calc(100vh - 120px);
@@ -53,6 +55,7 @@
       /* Mobile tweaks */
       @media (max-width: 600px){
         .logo { transform: scale(0.5); margin-bottom: 20px; }
+        .logo-img{ width: 200px; margin-bottom:16px; }
         .hero h1.page-title { font-size: 1.7rem; }
         .tagline { font-size: 1rem; }
       }
@@ -63,11 +66,7 @@
 <div class="hero">
   <div class="hero-inner">
     <!-- Big namespaced logo to avoid base .monogram collisions -->
-    <div class="logo">
-      <span class="logo-letter logo-v-left">V</span>
-      <span class="logo-letter logo-d">D</span>
-      <span class="logo-letter logo-v-right">V</span>
-    </div>
+    <img class="logo-img" src="{{ url_for('static', filename='img/vibedrop_rustic.png') }}" alt="VibeDrop logo">
 
     <h1 class="page-title">🎶 Welcome to VibeDrop</h1>
     <p class="tagline">Log in with Spotify to drop your vibe</p>
