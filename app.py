@@ -11,7 +11,7 @@ from flask_migrate import Migrate
 import os
 import pytz
 from functools import wraps
-from sqlalchemy import func, case
+from sqlalchemy import func, case, and_
 from services.scoring import compute_drop_cred
 from utils.sms import send_email # sms reminders 
 import click # flask CLI route for user drop cred snapshot 
@@ -480,6 +480,41 @@ def circle_dashboard(circle_id):
     circle = SoundCircle.query.get_or_404(circle_id)
     members = circle.members
     # print("[DEBUG] circle drop time right before window calculation:", circle.drop_time)
+
+    # ---------------- NEW: compute circle leader from drop_creds ----------------
+    member_ids = [m.id for m in members] if members else []
+    circle_leader = None
+
+    if member_ids:
+        # subquery: latest snapshot per user
+        subq = (
+            db.session.query(
+                DropCred.user_id.label('uid'),
+                func.max(DropCred.computed_at).label('max_at')
+            )
+            .filter(DropCred.user_id.in_(member_ids))
+            # (Optional) if you use labeled windows, prefer lifetime:
+            # .filter((DropCred.window_label.is_(None)) | (DropCred.window_label == 'lifetime'))
+            .group_by(DropCred.user_id)
+            .subquery()
+        )
+
+        # join to fetch the *latest* row per member, then pick the highest score
+        latest_rows = (
+            db.session.query(User.vibedrop_username, DropCred.drop_cred_score)
+            .join(DropCred, DropCred.user_id == User.id)
+            .join(subq, and_(DropCred.user_id == subq.c.uid, DropCred.computed_at == subq.c.max_at))
+            .filter(User.id.in_(member_ids))
+            .all()
+        )
+
+        if latest_rows:
+            best = max(latest_rows, key=lambda r: (r.drop_cred_score or 0))
+            circle_leader = {
+                "vibedrop_username": best.vibedrop_username,
+                "drop_cred": round(float(best.drop_cred_score or 0), 1),
+            }
+    # ---------------------------------------------------------------------------
     
     # Get drop window (next_drop, most_recent_drop, second_most_recent_drop)
     drop_window = get_cycle_window(circle)

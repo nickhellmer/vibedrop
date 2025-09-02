@@ -3,45 +3,36 @@
 
 {% block extra_css %}
 <style>
-  /* Tighter ghost-danger for inline, texty actions */
+  /* Inline remove buttons (owner-only; revealed in "editing" mode) */
+  #members-section .owner-remove { display: none; margin-left: 8px; }
+  #members-section.editing .owner-remove { display: inline-block; }
+
+  /* Tiny ghost danger chip for member removal */
   .btn.ghost.danger.xs { padding: 2px 4px; font-size: .4rem; }
-  /* Slightly softer hover for subtlety */
   .btn.ghost.danger.xs:hover { background: rgba(255,77,79,0.06); }
-</style>
-<style>
-  /* Hidden by default */
-  #members-section .owner-remove { 
-    display: none; 
-    margin-left: 8px; 
-  }
 
-  /* When editing is on, reveal remove controls */
-  #members-section.editing .owner-remove {
-    display: inline-block;
-  }
-
-  /* Tiny pill — you can keep your ultra‑small tweak */
-  .btn.ghost.danger.xs { padding: 2px 4px; font-size: .4rem; }
-</style>
-<style>
+  /* Track links in "Fresh From the Drop" */
   .track-link {
-    color: var(--text);
-    text-decoration: none;
-    display: inline-block;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--text); text-decoration: none; display: inline-block;
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .track-link:hover { text-decoration: underline; }
+  .track-link .truncate { display: inline-block; vertical-align: middle; }
 
-  .track-link:hover {
-    text-decoration: underline;
+  /* Circle Leader banner */
+  .leader-card{
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px var(--brand-ghost) inset;
   }
+  .leader-card .k{
+    color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-size: .8rem;
+  }
+  .leader-card .leader-name{ font-weight: 600; font-size: 1.1rem; }
+  .leader-card .crown{ font-size: 1.25rem; line-height: 1; } /* slightly tighter */
 
-  .track-link .truncate {
-    display: inline-block;
-    vertical-align: middle;
-  }
+  /* Members table niceties */
+  #members-section td:first-child { white-space: nowrap; }
+  #members-section .submitted-col { text-align: center; }
 </style>
 {% endblock %}
 
@@ -54,6 +45,18 @@
 
 <div class="stack">
 
+    {% if circle_leader %}
+      <section class="card leader-card" aria-label="Circle leader">
+        <div class="row between">
+          <div>
+            <div class="k">Circle Leader</div>
+            <div class="leader-name">{{ circle_leader.username }}</div>
+          </div>
+          <div class="crown" title="Drop Cred">{{ '%.1f'|format(circle_leader.score) }} 👑</div>
+        </div>
+      </section>
+    {% endif %}
+    
     <!-- META CARD: CIRCLE INFO AND ACTIONS -->
     <section class="card">
       <div class="row between">
@@ -147,11 +150,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  {% if member.id in submitted_user_ids %}
-                    ✅
-                  {% else %}
-                    ❌
-                  {% endif %}
+                  {% if member.id in submitted_user_ids %}✅{% else %}❌{% endif %}
                 </td>
               </tr>
             {% endfor %}
