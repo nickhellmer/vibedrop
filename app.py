@@ -1,6 +1,6 @@
 from flask import Flask, redirect, request, render_template, session, url_for, flash, current_app, jsonify
 from models import db, User, SoundCircle, CircleMembership, Submission, SongFeedback, VibeScore, DropCred, Feedback
-from services.scoring import compute_drop_cred, snapshot_user_all_versions
+from services.scoring import compute_drop_cred, snapshot_user_all_versions, SCORING_VERSION
 import spotipy
 from utils.spotify_auth import get_auth_url, get_token, get_user_profile, refresh_token_if_needed
 from datetime import datetime, date, time, timedelta
@@ -523,26 +523,21 @@ def circle_dashboard(circle_id):
                 func.max(DropCred.computed_at).label('max_at')
             )
             .filter(DropCred.user_id.in_(member_ids))
-            # If you want to prefer lifetime rows when you have labeled windows, uncomment:
-            # .filter(or_(DropCred.window_label.is_(None), DropCred.window_label == 'lifetime'))
+            .filter(DropCred.score_version == SCORING_VERSION)   # ← ensure v4
+            # optionally keep lifetime-only:
+            # .filter((DropCred.window_label.is_(None)) | (DropCred.window_label == 'lifetime'))
             .group_by(DropCred.user_id)
             .subquery()
         )
-    
-        latest_rows = (
+        
+        latest = (
             db.session.query(User.vibedrop_username, DropCred.drop_cred_score)
             .join(DropCred, DropCred.user_id == User.id)
-            .join(subq, and_(DropCred.user_id == subq.c.uid, DropCred.computed_at == subq.c.max_at))
+            .join(subq, and_(DropCred.user_id == subq.c.uid,
+                             DropCred.computed_at == subq.c.max_at))
             .filter(User.id.in_(member_ids))
             .all()
         )
-    
-        if latest_rows:
-            best = max(latest_rows, key=lambda r: (r.drop_cred_score or 0))
-            circle_leader = {
-                "username": best.vibedrop_username,
-                "score": round(float(best.drop_cred_score or 0), 1),
-            }
     # ---------------------------------------------------------------------------
     
     # Get drop window (next_drop, most_recent_drop, second_most_recent_drop)
