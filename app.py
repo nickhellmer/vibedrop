@@ -11,7 +11,8 @@ from flask_migrate import Migrate
 import os
 import pytz
 from functools import wraps
-from sqlalchemy import func, case, and_
+from sqlalchemy import func, case
+from sqlalchemy import and_
 from services.scoring import compute_drop_cred
 from utils.sms import send_email # sms reminders 
 import click # flask CLI route for user drop cred snapshot 
