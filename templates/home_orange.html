@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}VibeDrop — Share Your Sound{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Page-scoped background override to match the logo’s canvas */
+  :root{ --bg:#1a1a1a; } /* slightly bluer charcoal to blend with the logo */
+
+  .hero {
+    min-height: calc(100vh - 120px);
+    display: flex;               /* flex instead of grid */
+    flex-direction: column;      /* stack logo + text + button */
+    align-items: center;         /* center horizontally */
+    justify-content: center;     /* center vertically */
+    text-align: center;
+    background: var(--bg);       /* match site background */
+  }
+    
+  .hero-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;   /* hard-center everything */
+    text-align: center;
+  }
+
+  .hero-inner h1.page-title {
+    margin-top: 16px;      /* add spacing so it doesn’t cling to logo */
+    text-align: center;
+    width: 100%;           /* ensure full width for alignment */
+  }
+
+  /* Use the new image directly */
+  .logo-img{
+    display:block;
+    width: 260px;             /* adjust to taste */
+    max-width: 70vw;
+    margin: 0 auto 24px;
+    image-rendering: auto;
+  }
+
+  .hero h1.page-title{ font-size:2.2rem; margin:0 0 8px; }
+  .tagline{ color:var(--muted); font-size:1.1rem; margin-bottom:16px; }
+
+  /* Spotify CTA uses our CTA teal, matching site buttons */
+  .btn.spotify{ background:var(--cta); color:#071a1c; font-weight:700; }
+  .btn.spotify:hover{ background:var(--cta-hover); }
+
+  @media (max-width:600px){
+    .logo-img{ width: 200px; margin-bottom:16px; }
+    .hero h1.page-title{ font-size:1.7rem; }
+    .tagline{ font-size:1rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div class="hero-inner">
+    <img class="logo-img" src="{{ url_for('static', filename='img/vibedrop_rustic.png') }}" alt="VibeDrop logo">
+
+    <h1 class="page-title">Welcome to VibeDrop</h1>
+    <p class="tagline">Log in with Spotify to drop your vibe</p>
+
+    <a href="{{ auth_url }}" class="btn spotify lg">Log in with Spotify</a>
+    <p class="note" style="margin-top:10px;">We’ll request permission to create playlists for your Sound Circles.</p>
+  </div>
+</div>
+{% endblock %}

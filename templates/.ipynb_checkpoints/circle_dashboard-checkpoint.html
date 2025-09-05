@@ -1,291 +1,276 @@
 {% extends "base.html" %}
 {% block title %}{{ circle.circle_name }} - VibeDrop{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-  body {
-    padding: 40px;
+  /* Inline remove buttons (owner-only; revealed in "editing" mode) */
+  #members-section .owner-remove { display: none; margin-left: 8px; }
+  #members-section.editing .owner-remove { display: inline-block; }
+
+  /* Tiny ghost danger chip for member removal */
+  .btn.ghost.danger.xs { padding: 2px 4px; font-size: .4rem; }
+  .btn.ghost.danger.xs:hover { background: rgba(255,77,79,0.06); }
+
+  /* Track links in "Fresh From the Drop" */
+  .track-link {
+    color: var(--text); text-decoration: none; display: inline-block;
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .track-link:hover { text-decoration: underline; }
+  .track-link .truncate { display: inline-block; vertical-align: middle; }
 
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: #7B4EFF;
+  /* Circle Leader banner */
+  .leader-card{
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px var(--brand-ghost) inset;
   }
-
-  h2 {
-    font-size: 1.8rem;
-    color: #FFFFFF;
-    margin-top: 40px;
-    margin-bottom: 15px;
+  .leader-card .k{
+    color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-size: .8rem;
   }
+  .leader-card .leader-name{ font-weight: 600; font-size: 1.1rem; }
+  .leader-card .crown{ font-size: 1.25rem; line-height: 1; } /* slightly tighter */
 
-  p {
-    font-size: 1.1rem;
-    color: #CCCCCC;
-    margin-bottom: 10px;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin-bottom: 20px;
-  }
-
-  li {
-    margin: 8px 0;
-    color: #FFFFFF;
-  }
-
-  button {
-    padding: 12px 20px;
-    font-size: 1rem;
-    font-weight: 600;
-    background-color: #7B4EFF;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    opacity: 1;
-    transition: background-color 0.2s ease-in-out;
-  }
-
-  button:hover {
-    background-color: #693BDA;
-  }
-
-  a {
-    color: #BB86FC;
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  a:hover {
-    text-decoration: underline;
-  }
-
-  .monogram {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .monogram span {
-    font-size: 40px;
-    position: absolute;
-    line-height: 1;
-    -webkit-text-stroke: 1.5px #7B4EFF;
-    color: #FFFFFF;
-  }
-
-  .monogram .v-left {
-    top: -9px;
-    left: 4px;
-    z-index: 2;
-    clip-path: inset(0 12px 0 0);
-  }
-
-  .monogram .v-right {
-    top: -9px;
-    left: 4px;
-    z-index: 0;
-    clip-path: inset(0 0 0 12px);
-  }
-
-  .monogram .d {
-    top: 8px;
-    left: 3px;
-    z-index: 1;
-    transform: rotate(18deg);
-    -webkit-text-stroke: 1.5px #FFFFFF;
-    color: #7B4EFF;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 30px;
-  }
-
-  th, td {
-    text-align: left;
-    padding: 12px;
-    border-bottom: 1px solid #444;
-  }
-
-  th {
-    color: #7B4EFF;
-    font-size: 1.1rem;
-  }
-
-  td {
-    font-size: 1.05rem;
-    color: #FFFFFF;
-  }
-
-  button.icon-button {
-    background: transparent;
-    border: 1px solid #444;
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-size: 1rem;
-    line-height: 1;
-    cursor: pointer;
-    opacity: 0.45;
-    transition: opacity 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
-    margin-right: 6px;
-  }
-
-  button.icon-button:hover { opacity: 0.75; border-color: #666; }
-  button.icon-button:active { transform: scale(0.98); }
-  button.icon-button.active { opacity: 1; border-color: #7B4EFF; }
-
-  td.actions-cell, th.actions-cell {
-    width: 90px;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 768px) {
-    body { padding: 20px; }
-    h1 { font-size: 1.8rem; text-align: center; }
-    h2 { font-size: 1.4rem; margin-top: 30px; margin-bottom: 12px; }
-    p, li, td, th { font-size: 0.95rem; }
-    ul { padding-left: 0; }
-    button { width: 100%; padding: 14px; font-size: 1rem; margin-top: 15px; }
-    .monogram { width: 30px; height: 30px; top: 15px; left: 15px; }
-    .monogram span { font-size: 30px; }
-    .monogram .v-left, .monogram .v-right { top: -6px; left: 3px; }
-    .monogram .d { top: 6px; left: 2px; }
-    a { font-size: 0.95rem; display: block; text-align: center; margin-top: 30px; }
-    table th, table td { padding: 6px 0; }
-
-
-    form button {          /* 'submit a vibe' and 'create spotify playlist' buttons on mobile */
-        width: auto;
-        padding: 6px 14px;     /* less vertical + horizontal space */
-        font-size: 0.75rem;    /* slightly smaller text */
-        margin-top: 12px;
-    }
-
-    button.icon-button {
-      font-size: 0.6rem;
-      padding: 3px 6px;        /* 👈 smaller horizontal padding */
-      min-width: auto;         /* 👈 let the button shrink */
-      width: auto;             /* 👈 no full-width on mobile */
-      display: inline-flex;    /* 👈 ensures tight wrap */
-      align-items: center;     /* 👈 vertical centering */
-      justify-content: center; /* 👈 horizontal centering */
-    }
-    
-    button.icon-button span.emoji {
-        font-size: 0.9rem;
-        display: inline-block;
-        line-height: 1;
-    }
-    
-    td.actions-cell {
-        width: 60px;
-        vertical-align: middle;      /* 👈 centers contents vertically */
-        text-align: center;
-    }
-
-    td.actions-cell form {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;                   /* optional: small space between like/dislike */
-    }
-
-    table td, table th {         /* 👈 mobile view tables */
-        font-size: 0.65rem;
-        word-break: break-word;     /* 👈 helps wrap long artist/song names */
-        padding: 2px 4px;           /* slightly more vertical + horizontal space */
-    }
-    
-    td.actions-cell {
-      width: 60px;                  /* 👈 smaller font size for Fresh From the Drop table */
-      vertical-align: middle;
-      text-align: center;
-    }
-    
-    td:last-child {
-      font-size: 0.55rem;           /* 👈 smaller size for Submitted On column only in Fresh From the Drop table */
-    }
-  }
+  /* Members table niceties */
+  #members-section td:first-child { white-space: nowrap; }
+  #members-section .submitted-col { text-align: center; }
 </style>
+{% endblock %}
 
-<div class="monogram">
-  <span class="v-left">V</span>
-  <span class="d">D</span>
-  <span class="v-right">V</span>
+{% block content %}
+{% set is_owner = (circle.creator_id == user_id) %}
+
+<div class="topbar">
+  <h1 class="page-title">{{ circle.circle_name }}</h1>
 </div>
 
-<h1>🎶 {{ circle.circle_name }}</h1>
+<div class="stack">
 
-<p><strong>Drop Frequency:</strong> {{ circle.drop_frequency }}</p>
-<p><strong>Drop Time:</strong> {{ circle.drop_time | to_est | datetimeformat('%I:%M %p EST') }}</p>
-
-{% if circle.drop_frequency == 'Weekly' %}
-  <p><strong>Drop Day:</strong> {{ circle.drop_day1 }}</p>
-{% elif circle.drop_frequency == 'Biweekly' %}
-  <p><strong>Drop Days:</strong> {{ circle.drop_day1 }} &amp; {{ circle.drop_day2 }}</p>
-{% endif %}
-
-<p><strong>Invite Code:</strong> {{ circle.invite_code }}</p>
-
-<h2>Members</h2>
-<table>
-  <tr>
-    <th>Username</th>
-    <th>Submitted This Cycle?</th>
-  </tr>
-  {% for member in members %}
-  <tr>
-    <td>{{ member.vibedrop_username }}</td>
-    <td>
-      {% if member.id in submitted_user_ids %}
-        ✅
-      {% else %}
-        ❌
-      {% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-</table>
-
-<form action="{{ url_for('submit_song', circle_id=circle.id) }}">
-  <button type="submit">🎵 Submit a Vibe</button>
-</form>
-
-{% if testing_mode %}
-  <h2>Submitted Vibes (Testing Mode Only)</h2>
-  {% if submissions %}
-    <table>
-      <thead>
-        <tr><th>Vibe Name</th><th>Vibe Artist</th><th>Submitted On</th></tr>
-      </thead>
-      <tbody>
-        {% for submission in submissions %}
-        <tr>
-          <td>{{ submission.track_name or "Unknown Title" }}</td>
-          <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-          <td>{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y at %I:%M %p EST') }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No vibes dropped yet.</p>
-  {% endif %}
-{% endif %}
-
-<h2>🎶 Fresh From the Drop — Build Your Playlist</h2>
-{% if previous_submissions %}
-    <button onclick="createPlaylist()">🎧 Create & Open Playlist in Spotify</button>
+    {% if circle_leader %}
+      <section class="card leader-card" aria-label="Circle leader">
+        <div class="row between">
+          <div>
+            <div class="k">Circle Leader</div>
+            <div class="leader-name">{{ circle_leader.username }}</div>
+          </div>
+          <div class="crown" title="Drop Cred">{{ '%.1f'|format(circle_leader.score) }} 👑</div>
+        </div>
+      </section>
+    {% endif %}
     
+    <!-- META CARD: CIRCLE INFO AND ACTIONS -->
+    <section class="card">
+      <div class="row between">
+        <!-- Left: Meta grid -->
+        <div class="meta-grid">
+          <div class="kv">
+            <span class="k">Drop Frequency</span>
+            <span class="v chip">{{ circle.drop_frequency }}</span>
+          </div>
+    
+          <div class="kv">
+            <span class="k">Drop Time</span>
+            <span class="v chip">{{ circle.drop_time | to_est | datetimeformat('%I:%M %p EST') }}</span>
+          </div>
+    
+          <div class="kv">
+            <span class="k">Drop Day(s)</span>
+            <span class="v chip">
+              {% if circle.drop_frequency == 'Weekly' %}
+                {{ circle.drop_day1 }}
+              {% elif circle.drop_frequency == 'Biweekly' %}
+                {{ circle.drop_day1 }} &nbsp;&amp;&nbsp; {{ circle.drop_day2 }}
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+    
+          <div class="kv">
+            <span class="k">Invite Code</span>
+            <span class="v">
+              <span class="code-pill" id="invite-code">{{ circle.invite_code }}</span>
+              <button class="icon-button sm" type="button" title="Copy invite code" aria-label="Copy invite code"
+                      onclick="copyInviteCode()">📋</button>
+            </span>
+          </div>
+        </div>
+    
+        <!-- Actions / Buttons -->
+        <div class="row">
+          <a class="btn sm equal" href="{{ url_for('submit_song', circle_id=circle.id) }}">Submit a Vibe</a>
+        
+          {% if previous_submissions %}
+            <button type="button" class="btn xs equal" onclick="createPlaylist()">Create & Open Playlist</button>
+          {% endif %}
+          {% if is_owner %}
+            <a class="btn ghost sm equal" href="{{ url_for('edit_circle', circle_id=circle.id) }}">Edit Circle</a>
+            <button type="button" class="btn ghost sm equal" id="toggle-edit-members"
+                    aria-pressed="false" aria-controls="members-section">Edit members</button>
+            <form action="{{ url_for('delete_circle', circle_id=circle.id) }}" method="POST"
+                    onsubmit="return confirm('Are you sure you want to delete this Sound Circle? This cannot be undone.');">
+            <button type="submit" class="btn ghost danger sm equal">Delete Circle</button>
+            </form>
+          {% endif %}
+
+          {% if not is_owner %}
+              <form action="{{ url_for('leave_circle') }}" method="POST"
+                    onsubmit="return confirm('Leave this Sound Circle? You can rejoin later with the invite code.');">
+                <input type="hidden" name="circle_id" value="{{ circle.id }}">
+                <button type="submit" class="btn ghost danger sm equal">Leave Circle</button>
+              </form>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+  <!-- MEMBERS -->
+  <section class="card flex" id="members-section">
+    <h2 class="h2-tight">Members</h2>
+    {% if members and members|length > 0 %}
+      <div class="table-viewport flex grow" style="max-height: calc((100vh - 260px) / 2);">
+        <table class="table table--compact sortable">
+          <thead>
+            <tr>
+              <th data-type="text">Username</th>
+              <th class="col-narrow" data-type="text">Submitted This Cycle?</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for member in members %}
+              <tr>
+                <td>
+                  {{ member.vibedrop_username }}
+                  {% if is_owner and member.id != user_id %}
+                    <form action="{{ url_for('remove_member', circle_id=circle.id, user_id=member.id) }}" 
+                          method="POST"
+                          class="owner-remove"
+                          onsubmit="return confirm('Remove {{ member.vibedrop_username }} from the Sound Circle?');">
+                      <button type="submit" class="btn ghost danger xs" aria-label="Remove {{ member.vibedrop_username }}">Remove</button>
+                    </form>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if member.id in submitted_user_ids %}✅{% else %}❌{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="subtle">No members yet.</p>
+    {% endif %}
+  </section>
+
+  <!-- TESTING-MODE SUBMISSIONS (current cycle, visible only in testing mode) -->
+  {% if testing_mode %}
+    <section class="card">
+      <div class="row" style="justify-content: space-between; align-items: baseline;">
+        <h2 class="h2-tight">Submitted Vibes (Testing Mode Only)</h2>
+      </div>
+
+      {% if submissions %}
+        <div class="table-viewport flex grow" style="max-height: calc((100vh - 260px) / 3);">
+          <table class="table table--compact sortable">
+            <thead>
+              <tr>
+                <th>Vibe Name</th>
+                <th>Vibe Artist</th>
+                <th class="col-narrow">Submitted On</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for submission in submissions %}
+                <tr>
+                  <td><span class="truncate">{{ submission.track_name or "Unknown Title" }}</span></td>
+                  <td><span class="truncate">{{ submission.track_artist or "Unknown Artist" }}</span></td>
+                  <td>{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y at %I:%M %p EST') }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="subtle">No submissions yet.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
+    <!-- FRESH FROM THE DROP (rate last finalized cycle) -->
+    <section class="card flex">
+      <div class="row" style="justify-content: space-between; align-items: baseline;">
+        <h2 class="h2-tight">Fresh From the Drop</h2>
+        {% if previous_submissions %}
+          <button type="button" class="btn" onclick="createPlaylist()">Create & Open Playlist in Spotify</button>
+        {% endif %}
+      </div>
+    
+      {% if previous_submissions %}
+        <div class="table-viewport flex grow mt-10" style="max-height: calc((100vh - 260px) / 2);">
+          <table class="table table--compact sortable">
+            <thead>
+              <tr>
+                <th class="col-narrow">Feedback</th>
+                <th data-type="text">Vibe Name</th>
+                <th data-type="text">Vibe Artist</th>
+                <th class="col-narrow" data-type="date">Submitted On</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for submission in previous_submissions %}
+                <tr>
+                  <td class="actions-cell">
+                    {% if submission.submitter_id != user_id or testing_mode %}
+                      <form action="{{ url_for('submit_feedback') }}" method="POST" class="action-row">
+                        <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
+                        <button type="submit" name="feedback" value="like"
+                                class="icon-button sm {% if submission.user_feedback == 'like' %}active{% endif %}"
+                                title="Like" aria-label="Like">👍</button>
+                        <button type="submit" name="feedback" value="dislike"
+                                class="icon-button sm {% if submission.user_feedback == 'dislike' %}active{% endif %}"
+                                title="Dislike" aria-label="Dislike">👎</button>
+                      </form>
+                    {% else %}
+                      <span class="subtle">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                      {% if submission.spotify_track_id %}
+                        <a href="https://open.spotify.com/track/{{ submission.spotify_track_id }}" class="track-link" target="_blank" rel="noopener noreferrer">
+                          {{ submission.track_name or "Unknown Title" }}
+                        </a>
+                      {% else %}
+                        <span class="truncate">{{ submission.track_name or "Unknown Title" }}</span>
+                      {% endif %}
+                  </td>
+                  <td><span class="truncate">{{ submission.track_artist or "Unknown Artist" }}</span></td>
+                  <td class="nowrap"
+                      data-sort="{{ submission.submitted_at.isoformat() if submission.submitted_at else '' }}">
+                    {{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y %I:%M %p') }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="subtle">🕐 No drops yet — check back after the next deadline.</p>
+      {% endif %}
+    </section>
+
+    <div class="row" style="justify-content:flex-start;">
+      <a class="btn link" href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
+    </div>
+
+  {% if testing_mode %}
+    <p class="subtle">🧪 Testing Mode Enabled — showing submissions regardless of deadline.</p>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+  {% if previous_submissions %}
     <script>
       async function createPlaylist() {
         try {
@@ -293,73 +278,88 @@
             method: "POST",
             headers: { "Content-Type": "application/json" }
           });
-    
           if (!response.ok) {
-            const errorData = await response.json();
-            alert(errorData.error || "Something went wrong.");
+            let err = "Something went wrong.";
+            try {
+              const data = await response.json();
+              if (data && data.error) err = data.error;
+            } catch {}
+            alert(err);
             return;
           }
-    
           const data = await response.json();
-          if (data.playlist_uri) {
+
+          if (data && data.playlist_url) {
+            // Open the web version of Spotify (works everywhere)
+            window.open(data.playlist_url, "_blank", "noopener");
+          } else if (data && data.playlist_uri) {
+            // Fallback: attempt to open the Spotify app
             window.location.href = data.playlist_uri;
-            setTimeout(() => {
-              window.location.href = data.playlist_url;
-            }, 1200);
           } else {
             alert("Playlist created, but no Spotify link returned.");
           }
-        } catch (error) {
-          console.error("Error creating playlist:", error);
-          alert("❌ Failed to create playlist: " + error.message);
+        } catch (e) {
+          alert("Network error creating playlist.");
         }
       }
     </script>
-
-  <table>
-    <thead>
-      <tr>
-        <th class="actions-cell"></th>
-        <th>Vibe Name</th>
-        <th>Vibe Artist</th>
-        <th>Submitted On</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for submission in previous_submissions %}
-      <tr>
-        <td class="actions-cell">
-          {% if submission.submitter_id != user_id or testing_mode %}
-            <form action="{{ url_for('submit_feedback') }}" method="POST" style="display:inline;">
-              <input type="hidden" name="song_id" value="{{ submission.submission_id }}">
-                <button type="submit" name="feedback" value="like"
-                  class="icon-button {% if submission.user_feedback == 'like' %}active{% endif %}">
-                  <span class="emoji">👍</span>
-                </button>
-                <button type="submit" name="feedback" value="dislike"
-                  class="icon-button {% if submission.user_feedback == 'dislike' %}active{% endif %}">
-                  <span class="emoji">👎</span>
-                </button>
-            </form>
-          {% else %}
-            <span style="color:#888;">—</span>
-          {% endif %}
-        </td>
-        <td>{{ submission.track_name or "Unknown Title" }}</td>
-        <td>{{ submission.track_artist or "Unknown Artist" }}</td>
-        <td>{{ submission.submitted_at | to_est | datetimeformat('%b %d, %Y at %I:%M %p EST') }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% else %}
-  <p>🕐 No previous cycles yet — this Sound Circle is just getting started! Check back after the next drop deadline</p>
-{% endif %}
-
-<br><br>
-<a href="{{ url_for('dashboard') }}">⬅️ Back to Profile</a>
-
-{% if testing_mode %}
-  <p style="color: orange;">🧪 Testing Mode Enabled — showing submissions regardless of deadline.</p>
-{% endif %}
+  {% endif %}
+  <script>
+      function copyInviteCode() {
+        const el = document.getElementById('invite-code');
+        if (!el) return;
+        const text = (el.textContent || el.innerText || '').trim();
+    
+        const flash = () => {
+          el.classList.add('flash');
+          setTimeout(() => el.classList.remove('flash'), 900);
+        };
+    
+        const fallback = () => {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta);
+          flash();
+        };
+    
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(flash).catch(fallback);
+        } else {
+          fallback();
+        }
+      }
+  </script>
+  <script>
+      (function(){
+        const btn = document.getElementById('toggle-edit-members');
+        const section = document.getElementById('members-section');
+        if (!btn || !section) return;
+    
+        const labels = {
+          off: 'Edit members',
+          on:  'Cancel editing'
+        };
+    
+        function updateUI(editing){
+          section.classList.toggle('editing', editing);
+          btn.setAttribute('aria-pressed', editing ? 'true' : 'false');
+          btn.textContent = editing ? labels.on : labels.off;
+        }
+    
+        let editing = false;
+        btn.addEventListener('click', () => {
+          editing = !editing;
+          updateUI(editing);
+        });
+    
+        // start hidden
+        updateUI(false);
+      })();
+  </script>
 {% endblock %}
