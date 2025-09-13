@@ -103,3 +103,67 @@ def snapshot_user_all_versions(user_id: int) -> None:
     wire that logic here. For now we recompute with the current version.
     """
     compute_drop_cred_scores()
+
+
+
+# --- Single-user API kept for app.py -----------------------------------------
+def compute_drop_cred(user_id: int, score_version: int | None = None) -> dict:
+    """
+    Compute v4 Drop Cred for a single user and return a dict with the fields
+    app.py expects (total_likes, total_dislikes, total_possible, drop_cred_score, ...).
+    """
+    version = score_version or SCORING_VERSION
+    if version == 4:
+        return _compute_drop_cred_v4_single(user_id)
+    raise ValueError(f"Unsupported scoring version: {version}")
+
+
+def _compute_drop_cred_v4_single(user_id: int) -> dict:
+    # v4 parameters
+    alpha = 5
+    mu = 0.7
+    beta = 3
+
+    # Count all feedback on tracks submitted by this user (across circles)
+    likes_q = (
+        db.session.query(func.count(SongFeedback.id))
+        .join(Submission, SongFeedback.song_id == Submission.id)
+        .filter(Submission.user_id == user_id, SongFeedback.feedback == "like")
+    )
+    total_q = (
+        db.session.query(func.count(SongFeedback.id))
+        .join(Submission, SongFeedback.song_id == Submission.id)
+        .filter(Submission.user_id == user_id)
+    )
+
+    total_likes = likes_q.scalar() or 0
+    total_ratings = total_q.scalar() or 0
+    total_dislikes = max(total_ratings - total_likes, 0)
+
+    # Distinct cycles the user has submitted to
+    cycles = (
+        db.session.query(func.count(func.distinct(Submission.cycle_date)))
+        .filter(Submission.user_id == user_id)
+        .scalar()
+        or 0
+    )
+
+    # Bayesian smoothing (like-rate on 0–10)
+    if (total_ratings + alpha) > 0:
+        bayesian = ((total_likes + alpha * mu) / (total_ratings + alpha)) * 10
+    else:
+        bayesian = mu * 10  # no ratings -> prior
+
+    # Participation bonus
+    participation_bonus = beta * min(cycles / 10, 1)
+
+    score = round(bayesian + participation_bonus, 2)
+
+    return {
+        "total_likes": int(total_likes),
+        "total_dislikes": int(total_dislikes),
+        "total_possible": int(total_ratings),
+        "drop_cred_score": float(score),
+        "score_version": 4,
+        "params": {"alpha": alpha, "mu": mu, "beta": beta, "cycles": int(cycles)},
+    }
