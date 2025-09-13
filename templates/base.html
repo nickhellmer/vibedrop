@@ -1,74 +1,452 @@
-<!-- templates/base.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VibeDrop</title>
-  <link rel="stylesheet" href="/static/style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+  {% set current_year = current_year or 2025 %}
+  <meta charset="UTF-8">
+  <title>{% block title %}VibeDrop{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;600&display=swap" rel="stylesheet">
+
   <style>
-    /* Optional: inline layout styling if style.css is missing */
-    body {
-      font-family: Arial, sans-serif;
-      background: #121212;
-      color: white;
-      margin: 0;
-      display: flex;
+    /* ================================
+       Design Tokens
+    ===================================*/
+    :root{
+      --bg:#121212;
+      --panel:#1a1a1a;            /* deep slate */
+      --text:#F3E8D0;             /* cream */
+      --muted:#BFB7A6;            /* sand */
+      --brand:#6F54C8;            /* rustic purple */
+      --brand-ghost:#7b4eff22;
+      --danger:#ff4d4f;
+      --success:#20c997;
+      --warning:#f59f00;
+      --radius:14px;
+      --gap:20px;
+      --shadow:0 6px 28px rgba(0,0,0,.35);
+      --border:#2a2a2a;
     }
-    .sidebar {
-      width: 220px;
-      background-color: #1f1f1f;
-      padding: 20px;
-      min-height: 100vh;
+
+    *{ box-sizing:border-box }
+    html, body{ height:100% }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Space Grotesk',sans-serif;
     }
-    .sidebar a {
-      display: block;
-      color: white;
-      margin: 10px 0;
-      text-decoration: none;
+    a{ color:var(--brand); text-decoration:none }
+    a:hover{ text-decoration:underline }
+
+    /* ================================
+       Layout
+    ===================================*/
+    main{
+      padding:40px 20px;
     }
-    .main-content {
-      flex-grow: 1;
-      padding: 40px;
+    .container{
+      max-width:1100px;
+      margin:0 auto;
     }
-    .flashes {
-      list-style-type: none;
+    .stack{ display:flex; flex-direction:column; gap:16px }
+    .row{ display:flex; flex-wrap:wrap; align-items:center; gap:12px }
+
+    /* Topbar & Titles */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px;
+    }
+    .page-title{
+      margin:0; font-weight:600; color:var(--brand);
+      font-size:2.2rem;
+    }
+    .subtle{ color:var(--muted) }
+
+    .h2-tight{
+      margin:0 0 8px 0;
+      font-size:1.35rem;
+    }
+
+    /* ================================
+       Cards
+    ===================================*/
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:5px;
+    }
+
+/* ================================
+    Lightweight Utilities
+===================================*/
+    /* Meta grid: tidy key-values that wrap nicely on mobile */
+    .meta-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap:12px 16px;
+    }
+    /* Key–value mini stack */
+    .kv{ display:flex; flex-direction:column; gap:3px; }
+    .kv .k{ font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    .kv .v{ font-size:1.05rem; }
+    /* Small pill chip for compact values */
+    .chip{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#171717;
+      font-size:.9rem;
+    }
+    /* Invite code “code pill” */
+    .code-pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px dashed var(--border);
+      background:#171717;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:.95rem;
+    }
+    /* Simple content divider (optional) */
+    .divider{height:1px; background:var(--border); margin:12px 0;}
+    /* Row helpers */
+    .between{ justify-content:space-between; }
+    .nowrap{ white-space:nowrap; }
+    /* Copy success flash */
+    .code-pill.flash {
+      border-color: var(--brand) !important;
+      box-shadow: 0 0 0 2px var(--brand-ghost);
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .action-row{ display:flex; align-items:center; gap:6px; } /* Small action row: avoid the larger .row gap */
+    .mt-10{ margin-top:10px; } /* Spacing utility between items (e.g., applied 10px spacing between a button and a table when called in the html file */
+    .note {font-size: .85rem; color: var(--muted); font-style: italic;} /* Subtle note text (smaller, italic, muted) */
+
+    /* ================================
+       Buttons
+    ===================================*/
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      background:var(--brand); color:#fff;
+      border:0; border-radius:12px;
+      padding:12px 18px; font-weight:600; cursor:pointer;
+      font-size:.95rem;                                   /* unify text size */
+      line-height:1;                                      /* consistent height calc */
+      font-family:'Space Grotesk',sans-serif;
+      transition:transform .04s ease, opacity .15s ease, background .15s ease;
+    }
+    .btn:hover{ background:#6a3fdc }
+    .btn:active{ transform:translateY(1px) }
+    .btn:disabled{ opacity:.55; cursor:not-allowed }
+    /* Generic ghost button (purple outline, no fill) */
+    .btn.ghost{ background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+    .btn.ghost:hover{ background: rgba(123,78,255,0.08); }
+    /* Ghost + Danger (outline red, not filled) */
+    .btn.ghost.danger{background: transparent; border: 1px solid var(--danger); border-color: var(--danger); color: var(--danger) }
+    .btn.ghost.danger:hover{background: rgba(255,77,79,0.08) }
+    /* Small + extra-small sizes for denser layouts */
+    .btn.xs{ padding:2px 4px; font-size:.75rem; border-radius:10px } /* button that has smaller text */ 
+    .btn.sm{ padding:8px 12px; font-size:.9rem; border-radius:10px }
+    .btn.lg{ padding:14px 22px; font-size:1.05rem; border-radius:14px }
+    /* Equal width utility for side-by-side CTAs */
+    .btn.equal{ min-width:160px; min-height: 30px; text-align:center }   /* tweak value to taste */
+
+    /* Icon buttons (like/dislike) */
+    .icon-button{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:40px; height:40px; border-radius:999px;
+      background:#171717; border:1px solid var(--border); color:var(--text);
+      cursor:pointer; transition:background .15s ease, border-color .15s ease, transform .04s ease;
+    }
+    /* Small variant for icon buttons (like/dislike in tables) */
+    .icon-button.sm{
+      width:28px;
+      height:28px;
+      font-size:.9rem;   /* shrink emoji/text */
+    }
+    .icon-button:hover{ background:#151515 }
+    .icon-button:active{ transform:translateY(1px) }
+    .icon-button.active{ border-color:var(--brand); box-shadow:0 0 0 2px var(--brand-ghost) inset; }
+
+    /* Link-style button */
+    .btn.link {
+      background: none;
+      border: none;
+      color: var(--brand);
+      font-weight: 600;
       padding: 0;
+      margin: 0;
+      text-decoration: none;
+      cursor: pointer;
     }
-    .flashes .flash {
-      background: #333;
-      border-left: 6px solid #7B4EFF;
-      padding: 10px;
-      margin-bottom: 12px;
+    
+    .btn.link:hover {
+      text-decoration: underline;
+      background: none;
     }
+
+    /* ================================
+       Tables
+    ===================================*/
+    table.table{width:100%; border-collapse:separate; border-spacing:0; background:#141414 }
+    /* Global table styling */
+    .table th, .table td { 
+        padding: 6px 10px;         /* table row top/bottom padding: 6px, horizontal: 10px */
+        vertical-align: middle;    /* Vertical centering across all cells */
+    }
+    .table-viewport{                     /* A scrollable viewport for tables (vertical + horizontal) */
+      position: relative;
+      max-height: 420px;                 /* desktop vertical window */
+      overflow: auto;                    /* both axes */
+      border-radius: 12px;
+      background:#141414;
+      border:1px solid var(--border);
+      -webkit-overflow-scrolling: touch; /* iOS sticky friendliness */
+    }
+    .table-viewport .table{ margin:0; }   /* prevent extra spacing */
+    .table thead th{                           /* Header (reduce from 12/14) */
+      background:#181818; color:var(--muted);
+      font-weight:600; text-align:left; 
+      padding:6px 10px; 
+      border-bottom:1px solid var(--border);   /* subtle divider right under the sticky header */
+      position: sticky; top: 0; z-index: 1;    /* sticky behavior */
+    }
+    .table tbody td{border-top:1px solid var(--border) }
+    .table tbody tr:hover{ background:#161616 }
+    .col-narrow{ width:1%; white-space:nowrap }
+    .col-wide{ width:40% }
+    .actions-cell{ display:flex; align-items:center; justify-content:center; gap:8px }
+    .nowrap{ white-space:nowrap; }
+    /* Slightly smaller font + tighter row padding */
+    .table--compact thead th{ padding:4px 8px; font-size:.95rem; }
+    .table--compact tbody td{ padding:4px 8px; font-size:.95rem; }
+    /* Single-line truncate with ellipsis */
+    .truncate{
+      display:inline-block;
+      max-width: 420px;   /* desktop default; overridden on mobile below */
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    /* Make sortable headers look clickable */
+    .table.sortable thead th { cursor: pointer; user-select: none; }
+    .table.sortable thead th .sort-ind { opacity:.55; margin-left:6px; font-size:.9em; }
+    .table.sortable thead th.active .sort-ind { opacity:1; }
+
+    /* ================================
+       Responsive/adaptive Table and Card Height Utilities
+    ===================================*/
+    .card.flex {display: flex; flex-direction: column }    /* Make a card behave like a vertical flex layout */
+    .grow {flex: 1 1 auto }    /* A child that should take the remaining space inside a flex card */
+    /* Table viewport that flexes to fill space within a flex card */
+    .table-viewport.flex {
+      flex: 1 1 auto;
+      min-height: 220px;                 /* floor so it never collapses */
+      max-height: calc(100vh - 260px);   /* let flex control height */
+      overflow: auto;                    /* scroll only if needed */
+    }
+
+    /* ================================
+       Forms
+    ===================================*/
+    label{ display:block; margin-bottom:6px; color:var(--muted) }
+    .form-control{
+      width:100%; background:#171717; color:var(--text);
+      border:1px solid var(--border); border-radius:12px; padding:10px 12px;
+      font-family:'Space Grotesk',sans-serif;
+    }
+    select.form-control{ appearance:none; background-image: none; }
+    .help{ color:var(--muted); font-size:.9rem; margin-top:6px }
+    .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .form-row.cols-3{ grid-template-columns:1fr 1fr 1fr }
+
+    /* ================================
+       Flash messages (existing preserved, + variants)
+    ===================================*/
+    .flash-message{
+      background-color:#1e1e1e;
+      border:1px solid var(--brand);
+      color:#fff;
+      padding:8px 12px;
+      margin:12px auto;
+      border-radius:8px;
+      width:65%;
+      max-width:320px;
+      text-align:center;
+      font-size:.85rem;
+      line-height:1.2;
+      opacity:1;
+      transition:opacity .5s ease;
+    }
+    .flash-message.success{ border-color:var(--success) }
+    .flash-message.error{ border-color:var(--danger) }
+    .flash-message.info{ border-color:var(--brand) }
+
+    /* ================================
+       Badges
+    ===================================*/
+    .badge{
+      display:inline-block; padding:4px 8px; border-radius:999px;
+      font-size:.85rem; line-height:1; border:1px solid var(--border); background:#171717; color:var(--muted);
+    }
+    .badge.success{ border-color:var(--success); color:var(--success) }
+    .badge.warning{ border-color:var(--warning); color:var(--warning) }
+    .badge.info{ border-color:var(--brand); color:var(--brand) }
+
+    /* ================================
+       Monogram (use your finalized spec)
+    ===================================*/
+    .monogram{ position:relative; width:40px; height:40px; }
+    .monogram span{
+      position:absolute; font-size:40px;
+      -webkit-text-stroke:1.5px purple; text-stroke:1.5px purple; line-height:1;
+    }
+    .v-left{ top:-9px; left:4px; clip-path:inset(0 12px 0 0); z-index:2 }
+    .v-right{ top:-9px; left:4px; clip-path:inset(0 0 0 12px); z-index:0 }
+    .d{ top:8px; left:3px; transform:rotate(18deg); color:#6F54C8; -webkit-text-stroke:1.5px white; text-stroke:1.5px white; z-index:1 }
+
+    /* ================================
+       Global Mobile Overrides
+    ===================================*/
+    @media (max-width: 768px){
+      main{ padding:22px 14px }
+      .page-title {
+        font-size:1.4rem;
+        max-width: 90%;          /* prevent really long names from breaking layout */
+      }
+      .btn{ padding:10px 14px; font-size:.95rem }
+      .btn.lg{ padding:12px 18px; font-size:1rem }
+      .icon-button{ width:36px; height:36px }
+      .table-viewport{ max-height: 50vh; }           /* taller window on phones */
+      .table-viewport.flex { min-height: 180px; }    /* minimum table window on phones */
+      .form-row, .form-row.cols-3{ grid-template-columns:1fr }
+      .actions-cell{ gap:6px }
+      .truncate{ max-width: 220px; }                 /* shorter line on mobile */
+      .table thead th{ font-size: .95rem; }
+      .table tbody td{ font-size: .95rem; }
+      .meta-grid{ grid-template-columns: 1fr 1fr; }  /* auto wraps to 1 per row if too tight */
+      .row { gap:10px; } /* was 12px */
+      .btn.equal{ min-width:140px; }                 /* shrink equal width for phones */
+    }
+
+
   </style>
+
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <aside class="sidebar">
-    <h2><a href="/dashboard">VibeDrop</a></h2>
-    <nav>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/submit_song">Submit Song</a>
-      <a href="/feedback">Rate Songs</a>
-      <a href="/circle_dashboard">Circle</a>
-      <a href="/account_settings">Settings</a>
-      <a href="/logout">Logout</a>
-    </nav>
-  </aside>
 
-  <main class="main-content">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul class="flashes">
+  <!-- Sidebar (existing include) -->
+  {% include 'sidebar.html' %}
+
+  <!-- Main content area -->
+  <main>
+    <!-- Flash Messages -->
+    <div id="flash-container" class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
           {% for category, message in messages %}
-            <li class="flash {{ category }}">{{ message }}</li>
+            <div class="flash-message {{ category }}">{{ message }}</div>
           {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+        {% endif %}
+      {% endwith %}
+    </div>
 
-    {% block content %}{% endblock %}
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
   </main>
+
+  <script>
+    // Auto-dismiss flashes (existing behavior preserved)
+    setTimeout(() => {
+      const flashes = document.querySelectorAll('.flash-message');
+      flashes.forEach(flash => {
+        flash.style.opacity = 0;
+        setTimeout(() => flash.remove(), 500);
+      });
+    }, 4000);
+  </script>
+
+  <script>
+    // Generic table sorter: add class="sortable" to any .table and data-type on its THs.
+    // data-type: "text" | "number" | "date". Cells can provide data-sort on TD for precise values.
+    (function(){
+      function getCellVal(td, type) {
+        const v = td.getAttribute('data-sort') ?? td.textContent.trim();
+        if (type === 'number') return parseFloat(v.replace(/[^0-9.\-]/g,'')) || 0;
+        if (type === 'date')   return Date.parse(v) || 0;
+        return v.toLowerCase();
+      }
+      function sortTable(table, colIdx, type, dir){
+        const tbody = table.tBodies[0];
+        const rows = Array.from(tbody.rows);
+        rows.sort((a,b)=>{
+          const va = getCellVal(a.cells[colIdx], type);
+          const vb = getCellVal(b.cells[colIdx], type);
+          if (va < vb) return dir==='asc' ? -1 : 1;
+          if (va > vb) return dir==='asc' ? 1 : -1;
+          return 0;
+        });
+        rows.forEach(r=>tbody.appendChild(r));
+      }
+      function initSortable(table){
+        const ths = Array.from(table.tHead?.rows[0]?.cells ?? []);
+        ths.forEach((th, i)=>{
+          const type = th.getAttribute('data-type') || 'text';
+          let dir = 'asc';
+          // insert simple indicator if not present
+          if (!th.querySelector('.sort-ind')){
+            const s = document.createElement('span');
+            s.className = 'sort-ind';
+            s.textContent = '↕';
+            th.appendChild(s);
+          }
+          th.addEventListener('click', ()=>{
+            ths.forEach(x=>x.classList.remove('active'));
+            th.classList.add('active');
+            sortTable(table, i, type, dir);
+            // toggle indicator glyph
+            th.querySelector('.sort-ind').textContent = (dir==='asc'?'↑':'↓');
+            dir = (dir==='asc' ? 'desc' : 'asc');
+          });
+        });
+      }
+      document.addEventListener('DOMContentLoaded', ()=>{
+        document.querySelectorAll('table.table.sortable').forEach(initSortable);
+        // Humanize any "lifetime" cells (data-created=ISO)
+        document.querySelectorAll('[data-created]').forEach(td=>{
+          const iso = td.getAttribute('data-created');
+          if(!iso) return;
+          const t = Date.parse(iso);
+          if(!t) return;
+          const ms = Date.now() - t;
+          const day = 86400000, week = 7*day, month = 30*day, year = 365*day;
+          let text;
+          if (ms < 14*day)      text = Math.max(1, Math.round(ms/day)) + ' day'   + (ms>=2*day?'s':'');
+          else if (ms < 9*week) text = Math.round(ms/week)             + ' week'  + (ms>=2*week?'s':'');
+          else if (ms < 24*month)text= Math.round(ms/month)            + ' month' + (ms>=2*month?'s':'');
+          else                   text = Math.round(ms/year)             + ' year'  + (ms>=2*year?'s':'');
+          td.textContent = text;
+          // Provide sort value as timestamp
+          td.setAttribute('data-sort', String(t));
+        });
+      });
+    })();
+  </script>
+
+  {% block extra_js %}{% endblock %}
+
+  <!-- Site-wide footer -->
+  <footer style="margin-top: 40px; padding: 20px; text-align: center; font-size: 0.9rem; 
+      color: var(--muted); border-top: 1px solid var(--border); background-color: #121212;">
+    <div class="container">
+      <span>&copy; {{ current_year }} VibeDrop</span> &nbsp;|&nbsp;
+      <a href="{{ url_for('privacy') }}">Privacy Policy</a> &nbsp;|&nbsp;
+      <a href="{{ url_for('terms') }}">Terms of Service</a>
+    </div>
+  </footer>
 </body>
 </html>
