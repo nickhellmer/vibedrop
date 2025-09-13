@@ -54,7 +54,7 @@ def score_v4():
         total_ratings = 0
 
         for s in submissions:
-            feedbacks = SongFeedback.query.filter_by(submission_id=s.id).all()
+            feedbacks = SongFeedback.query.filter_by(song_id=s.id).all()
             total_likes += sum(1 for f in feedbacks if f.feedback == "like")
             total_ratings += len(feedbacks)
 
