@@ -32,6 +32,7 @@ def score_v4():
     """
     # ✅ Lazy imports to avoid circular import at module load
     from models import db, Submission, SongFeedback, CircleMembership, DropCred, User
+    from sqlalchemy import func
 
     alpha = 5  # Prior strength
     mu = 0.7   # Prior mean like rate
@@ -119,6 +120,10 @@ def compute_drop_cred(user_id: int, score_version: int | None = None) -> dict:
 
 
 def _compute_drop_cred_v4_single(user_id: int) -> dict:
+    # lazy import to avoid circular import at module import time
+    from models import db, Submission, SongFeedback
+    from sqlalchemy import func
+    
     # v4 parameters
     alpha = 5
     mu = 0.7
