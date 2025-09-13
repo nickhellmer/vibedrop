@@ -1,5 +1,35 @@
+# Virtual envs
+.venv/
 venv/
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Env / secrets
 .env
+.env.*
+
+# Flask / local data
+instance/
+*.db
+*.sqlite3
+
+# Notebooks
 .ipynb_checkpoints/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Tools / tests / builds
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+.coverage
