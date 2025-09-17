@@ -823,44 +823,60 @@ def all_users():
         .subquery()
     )
 
-    # grab latest drop_cred per user subquery from drop_creds table
-    latest_dc = (
-        db.session.query(
-            DropCred.user_id.label('u_id'),
-            DropCred.drop_cred_score.label('drop_cred'),
-            func.max(DropCred.computed_at).label('computed_at'),
-        )
-        .group_by(DropCred.user_id, DropCred.drop_cred_score)
-        .subquery()
+    # 1) max(computed_at) per user
+dc_max = (
+    db.session.query(
+        DropCred.user_id.label("u_id"),
+        func.max(DropCred.computed_at).label("max_ts"),
     )
-    
-    rows = (
-        db.session.query(
-            User.id,
-            User.vibedrop_username,
-            User.created_at,
-            func.coalesce(submissions_q.c.submission_count, 0).label('submission_count'),
-            func.coalesce(feedback_q.c.likes_given, 0).label('likes_given'),
-            func.coalesce(feedback_q.c.dislikes_given, 0).label('dislikes_given'),
-            func.coalesce(latest_dc.c.drop_cred, 0.0).label('drop_cred'),
-        )
-        .outerjoin(submissions_q, submissions_q.c.u_id == User.id)
-        .outerjoin(feedback_q, feedback_q.c.u_id == User.id)
-        .outerjoin(latest_dc, latest_dc.c.u_id == User.id)
-        .all()
+    .group_by(DropCred.user_id)
+    .subquery()
+)
+
+# 2) the actual latest DropCred row per user
+latest_dc = (
+    db.session.query(
+        DropCred.user_id.label("u_id"),
+        DropCred.drop_cred_score.label("drop_cred"),
+        DropCred.computed_at.label("computed_at"),
     )
-    
-    users_stats = [
-        {
-            "vibedrop_username": r.vibedrop_username,
-            "created_at": r.created_at,
-            "drop_cred": round(float(r.drop_cred or 0.0), 1),
-            "submission_count": r.submission_count or 0,
-            "likes_given": r.likes_given or 0,
-            "dislikes_given": r.dislikes_given or 0,
-        }
-        for r in rows
-    ]
+    .join(
+        dc_max,
+        and_(
+            DropCred.user_id == dc_max.c.u_id,
+            DropCred.computed_at == dc_max.c.max_ts,
+        ),
+    )
+    .subquery()
+)
+
+rows = (
+    db.session.query(
+        User.id,
+        User.vibedrop_username,
+        User.created_at,
+        func.coalesce(submissions_q.c.submission_count, 0).label('submission_count'),
+        func.coalesce(feedback_q.c.likes_given, 0).label('likes_given'),
+        func.coalesce(feedback_q.c.dislikes_given, 0).label('dislikes_given'),
+        func.coalesce(latest_dc.c.drop_cred, 0.0).label('drop_cred'),
+    )
+    .outerjoin(submissions_q, submissions_q.c.u_id == User.id)
+    .outerjoin(feedback_q, feedback_q.c.u_id == User.id)
+    .outerjoin(latest_dc, latest_dc.c.u_id == User.id)
+    .all()
+)
+
+users_stats = [
+    {
+        "vibedrop_username": r.vibedrop_username,
+        "created_at": r.created_at,
+        "drop_cred": round(float(r.drop_cred or 0.0), 1),
+        "submission_count": r.submission_count or 0,
+        "likes_given": r.likes_given or 0,
+        "dislikes_given": r.dislikes_given or 0,
+    }
+    for r in rows
+]
 
     # Default sort: Drop Cred desc (tie-break by username)
     users_stats.sort(key=lambda x: (x["drop_cred"], x["vibedrop_username"].lower()), reverse=True)
