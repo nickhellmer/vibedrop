@@ -494,7 +494,6 @@ def circle_dashboard(circle_id):
 
     # ---------------- NEW: compute circle leader from drop_creds ----------------
     member_ids = [m.id for m in members] if members else []
-    circle_leader = None
     
     if member_ids:
         subq = (
@@ -611,36 +610,46 @@ def circle_dashboard(circle_id):
         likes_expr = func.sum(case((SongFeedback.feedback == 'like', 1), else_=0)).label('likes')
         dislikes_expr = func.sum(case((SongFeedback.feedback == 'dislike', 1), else_=0)).label('dislikes')
         net_expr = (func.coalesce(likes_expr, 0) - func.coalesce(dislikes_expr, 0)).label('net')
-    
-        top = (
-            db.session.query(
+
+        # get top leader
+        leader = (
+            db.session.query(  # columns to be returned
                 Submission.id.label('submission_id'),
                 Submission.spotify_track_id,
                 User.vibedrop_username.label('submitter_username'),
-                likes_expr, dislikes_expr, net_expr,
+                likes_expr, dislikes_expr, net_expr,                 # uses functions created above for new caluclated columns 
             )
-            .join(User, User.id == Submission.user_id)
-            .outerjoin(SongFeedback, SongFeedback.song_id == Submission.id)
-            .filter(Submission.id.in_(prev_ids))
+            .join(User, User.id == Submission.user_id)                                   # adds submitter info 
+            .outerjoin(SongFeedback, SongFeedback.song_id == Submission.id)              # attaches feedback rows if any. Still includes if 0
+            .filter(Submission.id.in_(prev_ids))                                         # limit results to subs from previous cycle
             .group_by(Submission.id, Submission.spotify_track_id, User.vibedrop_username)
             .order_by(net_expr.desc(),likes_expr.desc(),Submission.id.asc())
             .first()
         )
-    
-        if top:
-            # find the pre-fetched track name/artist you already built
-            idx = {s['submission_id']: s for s in previous_submissions}
-            srow = idx.get(top.submission_id, {})
-            hottest = {
-                "submission_id": top.submission_id,
-                "spotify_track_id": top.spotify_track_id,
-                "track_name": srow.get('track_name', 'Unknown Title'),
-                "track_artist": srow.get('track_artist', 'Unknown Artist'),
-                "submitter_username": top.submitter_username,
-                "likes": top.likes or 0,
-                "dislikes": top.dislikes or 0,
-                "net_likes": top.net or 0,
-            }
+
+        # if tied with others, grab all others to display 
+        hottest = []
+        if leader:
+            top_net = leader.net
+            top_likes = leader.likes
+        
+            # 2) Fetch ALL rows that match the top net and top likes
+            hottest = (
+                db.session.query(
+                    Submission.id.label('submission_id'),
+                    Submission.spotify_track_id,
+                    User.vibedrop_username.label('submitter_username'),
+                    likes_expr, dislikes_expr, net_expr,
+                )
+                .join(User, User.id == Submission.user_id)
+                .outerjoin(SongFeedback, SongFeedback.song_id == Submission.id)
+                .filter(Submission.id.in_(prev_ids))
+                .group_by(Submission.id, Submission.spotify_track_id, User.vibedrop_username)
+                .having(net_expr == top_net)
+                .having(likes_expr == top_likes)
+                .order_by(Submission.id.asc())  # stable order; no longer a tiebreaker
+                .all()
+            )
     
     return render_template(
         'circle_dashboard.html',
@@ -652,7 +661,6 @@ def circle_dashboard(circle_id):
         testing_mode=TESTING_MODE, 
         submitted_user_ids=submitted_user_ids,
         user_id=user_id,
-        circle_leader=circle_leader,
         hottest=hottest, 
     )
 

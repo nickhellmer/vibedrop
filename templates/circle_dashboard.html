@@ -44,18 +44,6 @@
 </div>
 
 <div class="stack">
-
-    {% if circle_leader %}
-      <section class="card leader-card" aria-label="Circle leader">
-        <div class="row between">
-          <div>
-            <div class="k">Circle Leader</div>
-            <div class="leader-name">{{ circle_leader.username }}</div>
-          </div>
-          <div class="crown" title="Drop Cred">{{ '%.1f'|format(circle_leader.score) }} 👑</div>
-        </div>
-      </section>
-    {% endif %}
     
     <!-- META CARD: CIRCLE INFO AND ACTIONS -->
     <section class="card">
@@ -123,31 +111,35 @@
       </div>
     </section>
 
-  {% if hottest %}
-    <section class="card" aria-label="Hottest drop from last cycle">
-      <div class="row between" style="align-items:center;">
-        <div>
-          <div class="k" style="text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">
-            Hottest Drop — last cycle
-          </div>
-          <div style="font-weight:600;">
-            {% if hottest.spotify_track_id %}
-              <a href="https://open.spotify.com/track/{{ hottest.spotify_track_id }}"
-                 class="track-link" target="_blank" rel="noopener noreferrer">
-                {{ hottest.track_name }}
-              </a>
-            {% else %}
-              <span class="track-link">{{ hottest.track_name }}</span>
-            {% endif %}
-            <span class="subtle"> — {{ hottest.track_artist }}</span>
-          </div>
-          <div class="subtle">Submitted by {{ hottest.submitter_username }}</div>
+  <!-- Best song of last cycle -->
+  {% if hottest and hottest|length > 0 %}
+  <section class="card" aria-label="Hottest drop from last cycle">
+    <div class="row between" style="align-items:center;">
+      <div>
+        <div class="k" style="text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">
+          Hottest Drop — last cycle
+          {% if hottest|length > 1 %}<span class="chip">{{ hottest|length }} winners</span>{% endif %}
         </div>
-        <div class="chip" title="Likes · Dislikes · Net">
-          👍 {{ hottest.likes }} &nbsp;·&nbsp; 👎 {{ hottest.dislikes }} &nbsp;·&nbsp; 🔥 {{ hottest.net_likes }}
-        </div>
+    
+        <ul style="margin:.25rem 0 0;padding-left:1rem;">
+          {% for h in hottest %}
+            <li style="margin:.15rem 0;">
+              {% if h.spotify_track_id %}
+                <a href="https://open.spotify.com/track/{{ h.spotify_track_id }}" class="track-link" target="_blank" rel="noopener noreferrer">
+                  {{ h.track_name }}
+                </a>
+              {% else %}
+                <span class="track-link">{{ h.track_name }}</span>
+              {% endif %}
+              <span class="subtle"> — {{ h.track_artist }}</span>
+              <span class="chip" title="Likes · Dislikes">👍 {{ h.likes }} · 👎 {{ h.dislikes }}</span>
+              <span class="subtle">by {{ h.submitter_username }}</span>
+            </li>
+          {% endfor %}
+        </ul>
       </div>
-    </section>
+    </div>
+  </section>
   {% endif %}
     
   <!-- MEMBERS -->
