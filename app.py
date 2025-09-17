@@ -823,7 +823,17 @@ def all_users():
         .subquery()
     )
 
-    # Base rows (we'll compute drop cred per user to match dashboard behavior)
+    # grab latest drop_cred per user subquery from drop_creds table
+    latest_dc = (
+        db.session.query(
+            DropCred.user_id.label('u_id'),
+            DropCred.drop_cred_score.label('drop_cred'),
+            func.max(DropCred.computed_at).label('computed_at'),
+        )
+        .group_by(DropCred.user_id, DropCred.drop_cred_score)
+        .subquery()
+    )
+    
     rows = (
         db.session.query(
             User.id,
@@ -832,29 +842,25 @@ def all_users():
             func.coalesce(submissions_q.c.submission_count, 0).label('submission_count'),
             func.coalesce(feedback_q.c.likes_given, 0).label('likes_given'),
             func.coalesce(feedback_q.c.dislikes_given, 0).label('dislikes_given'),
+            func.coalesce(latest_dc.c.drop_cred, 0.0).label('drop_cred'),
         )
         .outerjoin(submissions_q, submissions_q.c.u_id == User.id)
         .outerjoin(feedback_q, feedback_q.c.u_id == User.id)
+        .outerjoin(latest_dc, latest_dc.c.u_id == User.id)
         .all()
     )
-
-    # Compute Drop Cred exactly like the dashboard
-    users_stats = []
-    for r in rows:
-        try:
-            dc = compute_drop_cred(r.id)  # same function your dashboard uses
-            score = round(float(dc["drop_cred_score"]), 1)
-        except Exception:
-            score = 0.0  # safe fallback if anything odd happens
-
-        users_stats.append({
+    
+    users_stats = [
+        {
             "vibedrop_username": r.vibedrop_username,
             "created_at": r.created_at,
-            "drop_cred": score,
+            "drop_cred": round(float(r.drop_cred or 0.0), 1),
             "submission_count": r.submission_count or 0,
             "likes_given": r.likes_given or 0,
             "dislikes_given": r.dislikes_given or 0,
-        })
+        }
+        for r in rows
+    ]
 
     # Default sort: Drop Cred desc (tie-break by username)
     users_stats.sort(key=lambda x: (x["drop_cred"], x["vibedrop_username"].lower()), reverse=True)
