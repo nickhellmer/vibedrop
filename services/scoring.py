@@ -89,14 +89,14 @@ scoring_registry = {
 
 
 # --- Back-compat shims (keep app.py unchanged) -------------------------------
-def compute_drop_cred(user_id: int | None = None, score_version: int | None = None) -> dict:
-    """
-    Historical API used by app.py.
-    Current implementation recomputes scores globally using the active version.
-    Returns a small dict so existing call sites that inspect a return value keep working.
-    """
-    compute_drop_cred_scores()
-    return {"version": SCORING_VERSION, "recomputed": True}
+# def compute_drop_cred(user_id: int | None = None, score_version: int | None = None) -> dict:
+#     """
+#     Historical API used by app.py.
+#     Current implementation recomputes scores globally using the active version.
+#     Returns a small dict so existing call sites that inspect a return value keep working.
+#     """
+#     compute_drop_cred_scores()
+#     return {"version": SCORING_VERSION, "recomputed": True}
 
 def snapshot_user_all_versions(user_id: int) -> None:
     """

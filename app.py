@@ -185,28 +185,7 @@ def callback():
 
     # make session permanent
     session.permanent = True
-    
-#     session['user'] = {
-#         'id': user_data['id'],
-#         'display_name': user_data.get('display_name', 'Unknown'),
-#         'access_token': access_token,
-#         'refresh_token': token_data['refresh_token'],
-#         'expires_at': token_data['expires_at'],
-#     }
 
-#     # Check if user already exists in DB
-#     user = User.query.filter_by(spotify_id=user_data['id']).first()
-#     if user:
-#         # Update access token info and save
-#         user.access_token = access_token
-#         user.refresh_token = token_data.get('refresh_token')
-#         user.expires_at = token_data.get('expires_at')
-#         db.session.commit()
-#         return redirect(url_for('dashboard'))
-#     else:
-#         return redirect(url_for('register'))
-
-    # --- REPLACE everything from here down to the final redirect ---
     spotify_id = user_data["id"]
     display_name = user_data.get("display_name") or spotify_id
     
@@ -1029,15 +1008,6 @@ def leave_circle():
         flash('You have left the circle.', 'info')
 
     return redirect(url_for('account_settings'))
-
-# # send email reminders test
-# @app.route('/send-email-test')
-# def send_email_test():
-#     users = User.query.filter_by(sms_notifications=True).all()
-#     for user in users:
-#         if user.email:
-#             send_email(user.email, "🎵 Reminder from VibeDrop: Don’t forget to drop your vibe!")
-#     return "✅ Email reminders sent!"
 
 
 @app.route('/send-email-reminders')
