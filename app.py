@@ -623,7 +623,7 @@ def circle_dashboard(circle_id):
             .outerjoin(SongFeedback, SongFeedback.song_id == Submission.id)
             .filter(Submission.id.in_(prev_ids))
             .group_by(Submission.id, Submission.spotify_track_id, User.vibedrop_username)
-            .order_by(desc(net_expr), desc(likes_expr), Submission.id.asc())
+            .order_by(net_expr.desc(),likes_expr.desc(),Submission.id.asc())
             .first()
         )
     
