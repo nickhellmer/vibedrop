@@ -576,17 +576,17 @@ def circle_dashboard(circle_id):
             'spotify_track_id': sub.spotify_track_id,
         }
 
-        # print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop)                ### DEBUG PRINTS FOR TIMEZONES ###
+        # print("[DEBUG] most recent drop:", most_recent_drop, "[DEBUG] next drop:", next_drop)     ### DEBUG PRINTS FOR TIMEZONES ###
         if most_recent_drop <= ts < next_drop:
             enriched_submissions.append(enriched)
         elif second_most_recent_drop <= ts < most_recent_drop:
             previous_submissions.append(enriched)
             feedback_submission_ids.append(sub.id)
-        else:                                                                                                           ### DEBUG PRINTS FOR TIMEZONES ###
+        else:                                                                         ### DEBUG PRINTS FOR TIMEZONES ###
             current_app.logger.info("→ skipped (older than 2 cycles), submission_id=%s ts=%s",sub.id, ts)
     
-    ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
-    current_app.logger.info("Summary: current=%d previous=%d",len(enriched_submissions), len(previous_submissions))
+    # ### DEBUG PRINTS FOR TIMEZONES (may need to place this within the "for sub" loop ###
+    # current_app.logger.info("Summary: current=%d previous=%d",len(enriched_submissions), len(previous_submissions))
     
     # get feedback submission IDs for likes/dislikes
     feedback_entries = SongFeedback.query.filter(
@@ -602,6 +602,45 @@ def circle_dashboard(circle_id):
     # After you've built previous_submissions and feedback_map
     for item in previous_submissions:
         item['user_feedback'] = feedback_map.get(item['submission_id'])
+
+    # --- Hottest drop from last finalized cycle ---
+    hottest = None
+    prev_ids = [s['submission_id'] for s in previous_submissions]
+    
+    if prev_ids:
+        likes_expr = func.sum(case((SongFeedback.feedback == 'like', 1), else_=0)).label('likes')
+        dislikes_expr = func.sum(case((SongFeedback.feedback == 'dislike', 1), else_=0)).label('dislikes')
+        net_expr = (func.coalesce(likes_expr, 0) - func.coalesce(dislikes_expr, 0)).label('net')
+    
+        top = (
+            db.session.query(
+                Submission.id.label('submission_id'),
+                Submission.spotify_track_id,
+                User.vibedrop_username.label('submitter_username'),
+                likes_expr, dislikes_expr, net_expr,
+            )
+            .join(User, User.id == Submission.user_id)
+            .outerjoin(SongFeedback, SongFeedback.song_id == Submission.id)
+            .filter(Submission.id.in_(prev_ids))
+            .group_by(Submission.id, Submission.spotify_track_id, User.vibedrop_username)
+            .order_by(desc(net_expr), desc(likes_expr), Submission.id.asc())
+            .first()
+        )
+    
+        if top:
+            # find the pre-fetched track name/artist you already built
+            idx = {s['submission_id']: s for s in previous_submissions}
+            srow = idx.get(top.submission_id, {})
+            hottest = {
+                "submission_id": top.submission_id,
+                "spotify_track_id": top.spotify_track_id,
+                "track_name": srow.get('track_name', 'Unknown Title'),
+                "track_artist": srow.get('track_artist', 'Unknown Artist'),
+                "submitter_username": top.submitter_username,
+                "likes": top.likes or 0,
+                "dislikes": top.dislikes or 0,
+                "net_likes": top.net or 0,
+            }
     
     return render_template(
         'circle_dashboard.html',
@@ -614,6 +653,7 @@ def circle_dashboard(circle_id):
         submitted_user_ids=submitted_user_ids,
         user_id=user_id,
         circle_leader=circle_leader,
+        hottest=hottest, 
     )
 
 @app.route('/submit_feedback', methods=['POST'])

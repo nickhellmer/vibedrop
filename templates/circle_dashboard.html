@@ -123,6 +123,33 @@
       </div>
     </section>
 
+  {% if hottest %}
+    <section class="card" aria-label="Hottest drop from last cycle">
+      <div class="row between" style="align-items:center;">
+        <div>
+          <div class="k" style="text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">
+            Hottest Drop — last cycle
+          </div>
+          <div style="font-weight:600;">
+            {% if hottest.spotify_track_id %}
+              <a href="https://open.spotify.com/track/{{ hottest.spotify_track_id }}"
+                 class="track-link" target="_blank" rel="noopener noreferrer">
+                {{ hottest.track_name }}
+              </a>
+            {% else %}
+              <span class="track-link">{{ hottest.track_name }}</span>
+            {% endif %}
+            <span class="subtle"> — {{ hottest.track_artist }}</span>
+          </div>
+          <div class="subtle">Submitted by {{ hottest.submitter_username }}</div>
+        </div>
+        <div class="chip" title="Likes · Dislikes · Net">
+          👍 {{ hottest.likes }} &nbsp;·&nbsp; 👎 {{ hottest.dislikes }} &nbsp;·&nbsp; 🔥 {{ hottest.net_likes }}
+        </div>
+      </div>
+    </section>
+  {% endif %}
+    
   <!-- MEMBERS -->
   <section class="card flex" id="members-section">
     <h2 class="h2-tight">Members</h2>
