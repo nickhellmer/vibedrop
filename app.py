@@ -650,6 +650,31 @@ def circle_dashboard(circle_id):
                 .order_by(Submission.id.asc())  # stable order; no longer a tiebreaker
                 .all()
             )
+
+        # Build a quick lookup from the already-enriched previous_submissions
+        meta_by_id = {
+            p['submission_id']: {
+                'track_name': p.get('track_name') or 'Unknown Vibe',
+                'track_artist': p.get('track_artist') or 'Unknown Artist',
+            }
+            for p in previous_submissions
+        }
+        
+        # Convert hottest rows to dicts and attach names
+        if hottest:
+            enriched_hottest = []
+            for row in hottest:
+                info = meta_by_id.get(row.submission_id, {})
+                enriched_hottest.append({
+                    'submission_id': row.submission_id,
+                    'spotify_track_id': row.spotify_track_id,
+                    'submitter_username': row.submitter_username,
+                    'likes': row.likes or 0,
+                    'dislikes': row.dislikes or 0,
+                    'track_name': info.get('track_name', 'Unknown Vibe'),
+                    'track_artist': info.get('track_artist', 'Unknown Artist'),
+                })
+            hottest = enriched_hottest
     
     return render_template(
         'circle_dashboard.html',
