@@ -58,34 +58,34 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
         # build timezone-aware EST datetime at the circle’s drop time
         return tz_est.localize(datetime.combine(base_date, drop_time_obj))
 
-    if circle.drop_frequency.lower() == "daily":
-        today_drop_est = local_drop_datetime_est(now_est.date())
+    # if circle.drop_frequency.lower() == "daily":
+    #     today_drop_est = local_drop_datetime_est(now_est.date())
 
-        if now_est < today_drop_est:
-            next_drop_est = today_drop_est
-        else:
-            next_drop_est = today_drop_est + timedelta(days=1)
+    #     if now_est < today_drop_est:
+    #         next_drop_est = today_drop_est
+    #     else:
+    #         next_drop_est = today_drop_est + timedelta(days=1)
 
-        most_recent_drop_est = next_drop_est - timedelta(days=1)
-        second_most_recent_drop_est = next_drop_est - timedelta(days=2)
+    #     most_recent_drop_est = next_drop_est - timedelta(days=1)
+    #     second_most_recent_drop_est = next_drop_est - timedelta(days=2)
         
-        # convert to UTC for internal use 
-        next_drop_utc = next_drop_est.astimezone(tz_utc)
-        most_recent_drop_utc = most_recent_drop_est.astimezone(tz_utc)
-        second_most_recent_utc = second_most_recent_drop_est.astimezone(tz_utc)
+    #     # convert to UTC for internal use 
+    #     next_drop_utc = next_drop_est.astimezone(tz_utc)
+    #     most_recent_drop_utc = most_recent_drop_est.astimezone(tz_utc)
+    #     second_most_recent_utc = second_most_recent_drop_est.astimezone(tz_utc)
 
-        # return UTC for internal logic
-        return (
-            next_drop_est.astimezone(tz_utc),
-            most_recent_drop_est.astimezone(tz_utc),
-            second_most_recent_drop_est.astimezone(tz_utc),
-        )
+    #     # return UTC for internal logic
+    #     return (
+    #         next_drop_est.astimezone(tz_utc),
+    #         most_recent_drop_est.astimezone(tz_utc),
+    #         second_most_recent_drop_est.astimezone(tz_utc),
+    #     )
 
     # weekly / biweekly
     if circle.drop_frequency.lower() == "weekly":
         drop_days = [circle.drop_day1]
-    elif circle.drop_frequency.lower() == "biweekly":
-        drop_days = [circle.drop_day1, circle.drop_day2]
+    # elif circle.drop_frequency.lower() == "biweekly":
+    #     drop_days = [circle.drop_day1, circle.drop_day2]
     else:
         return None
 
@@ -845,32 +845,103 @@ def create_playlist(circle_id):
     # Spotify auth
     sp = spotipy.Spotify(auth=session['user']['access_token'])
 
-    # Create playlist
+    ########## old code for trying to create a new playlist when it always made a new playlist ###########
+    # # Create playlist
+    # today_str = most_recent_drop.strftime('%b %d, %Y')
+    # playlist_name = f"VibeDrop - {circle.circle_name} - {today_str}"
+    # description = f"Vibes from the {circle.circle_name} Sound Circle on {today_str}"
+    # try:
+    #     playlist = sp.user_playlist_create(
+    #         user=session['user']['id'],
+    #         name=playlist_name,
+    #         public=False,
+    #         description=description
+    #     )
+
+    #     track_uris = [f"spotify:track:{sub.spotify_track_id}" for sub in previous_submissions if sub.spotify_track_id]
+    #     sp.playlist_add_items(playlist_id=playlist['id'], items=track_uris)
+        
+    #     return jsonify({
+    #         "playlist_id": playlist['id'],
+    #         "playlist_uri": f"spotify://playlist/{playlist['id']}",
+    #         "playlist_url": playlist['external_urls']['spotify'],
+    #         "message": f"✅ Playlist '{playlist_name}' created and added to your Spotify!"
+    #     })
+    ########## old code for trying to create a new playlist when it always made a new playlist ###########
+
+    # Use a stable playlist name per circle so we can re-use it
+    base_name = f"VibeDrop - {circle.circle_name}"
     today_str = most_recent_drop.strftime('%b %d, %Y')
-    playlist_name = f"VibeDrop - {circle.circle_name} - {today_str}"
-    description = f"Vibes from the {circle.circle_name} Sound Circle on {today_str}"
+    description = f"Vibes from the {circle.circle_name} Sound Circle — updated {today_str}"
 
     try:
-        playlist = sp.user_playlist_create(
-            user=session['user']['id'],
-            name=playlist_name,
-            public=False,
-            description=description
-        )
+        # 1) Find existing playlist by name (paginate through playlists)
+        playlist = None
+        page = sp.current_user_playlists(limit=50)
+        while page:
+            for p in page.get("items", []):
+                if p.get("name") == base_name:
+                    playlist = p
+                    break
+            if playlist or not page.get("next"):
+                break
+            page = sp.next(page)
 
-        track_uris = [f"spotify:track:{sub.spotify_track_id}" for sub in previous_submissions if sub.spotify_track_id]
-        sp.playlist_add_items(playlist_id=playlist['id'], items=track_uris)
-        
+        created = False
+        if not playlist:
+            playlist = sp.user_playlist_create(
+                user=session['user']['id'],
+                name=base_name,
+                public=False,
+                description=description
+            )
+            created = True
+
+        playlist_id = playlist["id"]
+
+        # 2) Build track uris from previous cycle
+        track_uris = [
+            f"spotify:track:{sub.spotify_track_id}"
+            for sub in previous_submissions
+            if sub.spotify_track_id
+        ]
+
+        # 3) Optional: skip tracks already in the playlist (prevents duplicates)
+        existing_ids = set()
+        items_page = sp.playlist_items(
+            playlist_id,
+            fields="items(track(id)),next",
+            limit=100
+        )
+        while items_page:
+            for it in items_page.get("items", []):
+                t = (it.get("track") or {})
+                tid = t.get("id")
+                if tid:
+                    existing_ids.add(tid)
+            if not items_page.get("next"):
+                break
+            items_page = sp.next(items_page)
+
+        new_uris = [u for u in track_uris if u.split(":")[-1] not in existing_ids]
+
+        # Spotify add-items limit is 100 per call
+        for i in range(0, len(new_uris), 100):
+            sp.playlist_add_items(playlist_id=playlist_id, items=new_uris[i:i+100])
+
         return jsonify({
-            "playlist_id": playlist['id'],
-            "playlist_uri": f"spotify://playlist/{playlist['id']}",
-            "playlist_url": playlist['external_urls']['spotify'],
-            "message": f"✅ Playlist '{playlist_name}' created and added to your Spotify!"
+            "playlist_id": playlist_id,
+            "playlist_uri": f"spotify://playlist/{playlist_id}",
+            "playlist_url": playlist["external_urls"]["spotify"],
+            "message": (
+                f"✅ Playlist created and filled!"
+                if created else
+                f"✅ Added {len(new_uris)} new vibe(s) to your existing playlist!"
+            )
         })
 
     except Exception as e:
-        # print("Playlist creation error:", e)
-        return jsonify({"error": "Failed to create playlist. Try logging out and back in."}), 500
+        return jsonify({"error": "Failed to create/update playlist. Try logging out and back in."}), 500
 
 # route to the all users page 
 @app.route('/all-users', methods=['GET'])
