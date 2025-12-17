@@ -878,8 +878,11 @@ def create_playlist(circle_id):
         # 1) Find existing playlist by name (paginate through playlists)
         playlist = None
         page = sp.current_user_playlists(limit=50)
+        i = 0
         while page:
             for p in page.get("items", []):
+                print(f"item {i} in playlists: {p['name']}")
+                i = i + 1
                 if p.get("name") == base_name:
                     playlist = p
                     break
