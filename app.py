@@ -623,12 +623,13 @@ def circle_dashboard(circle_id):
             .outerjoin(SongFeedback, SongFeedback.song_id == Submission.id)              # attaches feedback rows if any. Still includes if 0
             .filter(Submission.id.in_(prev_ids))                                         # limit results to subs from previous cycle
             .group_by(Submission.id, Submission.spotify_track_id, User.vibedrop_username)
+            .having(likes_expr > 0)                                                      # only songs with at least 1 like
             .order_by(net_expr.desc(),likes_expr.desc(),Submission.id.asc())
             .first()
         )
 
         # if tied with others, grab all others to display 
-        hottest = []
+        hottest = None # default to no leader so if leader query returns none, no users will show on the dashboard since all have 0 likes 
         if leader:
             top_net = leader.net
             top_likes = leader.likes
@@ -645,6 +646,7 @@ def circle_dashboard(circle_id):
                 .outerjoin(SongFeedback, SongFeedback.song_id == Submission.id)
                 .filter(Submission.id.in_(prev_ids))
                 .group_by(Submission.id, Submission.spotify_track_id, User.vibedrop_username)
+                .having(likes_expr > 0)                                                      # only songs with at least 1 like (not fully necessary bc it matches to leader query)
                 .having(net_expr == top_net)
                 .having(likes_expr == top_likes)
                 .order_by(Submission.id.asc())  # stable order; no longer a tiebreaker
