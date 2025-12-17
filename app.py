@@ -58,28 +58,28 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
         # build timezone-aware EST datetime at the circle’s drop time
         return tz_est.localize(datetime.combine(base_date, drop_time_obj))
 
-    # if circle.drop_frequency.lower() == "daily":
-    #     today_drop_est = local_drop_datetime_est(now_est.date())
+    if circle.drop_frequency.lower() == "daily":
+        today_drop_est = local_drop_datetime_est(now_est.date())
 
-    #     if now_est < today_drop_est:
-    #         next_drop_est = today_drop_est
-    #     else:
-    #         next_drop_est = today_drop_est + timedelta(days=1)
+        if now_est < today_drop_est:
+            next_drop_est = today_drop_est
+        else:
+            next_drop_est = today_drop_est + timedelta(days=1)
 
-    #     most_recent_drop_est = next_drop_est - timedelta(days=1)
-    #     second_most_recent_drop_est = next_drop_est - timedelta(days=2)
+        most_recent_drop_est = next_drop_est - timedelta(days=1)
+        second_most_recent_drop_est = next_drop_est - timedelta(days=2)
         
-    #     # convert to UTC for internal use 
-    #     next_drop_utc = next_drop_est.astimezone(tz_utc)
-    #     most_recent_drop_utc = most_recent_drop_est.astimezone(tz_utc)
-    #     second_most_recent_utc = second_most_recent_drop_est.astimezone(tz_utc)
+        # convert to UTC for internal use 
+        next_drop_utc = next_drop_est.astimezone(tz_utc)
+        most_recent_drop_utc = most_recent_drop_est.astimezone(tz_utc)
+        second_most_recent_utc = second_most_recent_drop_est.astimezone(tz_utc)
 
-    #     # return UTC for internal logic
-    #     return (
-    #         next_drop_est.astimezone(tz_utc),
-    #         most_recent_drop_est.astimezone(tz_utc),
-    #         second_most_recent_drop_est.astimezone(tz_utc),
-    #     )
+        # return UTC for internal logic
+        return (
+            next_drop_est.astimezone(tz_utc),
+            most_recent_drop_est.astimezone(tz_utc),
+            second_most_recent_drop_est.astimezone(tz_utc),
+        )
 
     # weekly / biweekly
     if circle.drop_frequency.lower() == "weekly":
