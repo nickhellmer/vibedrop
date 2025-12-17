@@ -113,7 +113,7 @@ def get_cycle_window(circle: SoundCircle) -> tuple[datetime, datetime, datetime]
             return None
 
     # no future window found (unlikely)
-    print("[DEBUG] Unexpected: get_cycle_window() could not determine drop window.")
+    # print("[DEBUG] Unexpected: get_cycle_window() could not determine drop window.")
     return None
 
 # replace drop cred scores directly in drop_creds table when calculated in dashboard route with "compute_drop_cred" call
@@ -168,17 +168,17 @@ def home():
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
-    print("Received code:", code) # debug line 
+    # print("Received code:", code) # debug line 
     token_data = get_token(code)
-    print("Token data:", token_data) # debug line
+    # print("Token data:", token_data) # debug line
     access_token = token_data.get('access_token')
-    print("Access token:", access_token) # debug line
+    # print("Access token:", access_token) # debug line
 
     if not access_token:
         return "❌ Error getting Spotify access token.", 400
 
     user_data = get_user_profile(access_token)
-    print("User profile response:", user_data) # debug line
+    # print("User profile response:", user_data) # debug line
     
     if user_data is None:
         return "❌ Failed to fetch Spotify profile. Please try logging in again.", 400
@@ -322,7 +322,7 @@ def create_circle():
         if drop_frequency.lower() == "biweekly" and drop_day1 == drop_day2:
             return "❌ For biweekly circles, please choose two different drop days.", 400
 
-        print("drop_time_str when selected",drop_time_str)
+        # print("drop_time_str when selected",drop_time_str)
         
         # Convert to EST datetime (only the time matters, date is arbitrary)
         try:
@@ -337,7 +337,7 @@ def create_circle():
         # Generate unique invite code (simple example)
         invite_code = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
 
-        print("drop_time when saved:",drop_time)
+        # print("drop_time when saved:",drop_time)
         new_circle = SoundCircle(
             circle_name=circle_name,
             drop_frequency=drop_frequency,
@@ -878,11 +878,8 @@ def create_playlist(circle_id):
         # 1) Find existing playlist by name (paginate through playlists)
         playlist = None
         page = sp.current_user_playlists(limit=50)
-        i = 0
         while page:
             for p in page.get("items", []):
-                print(f"item {i} in playlists: {p['name']}")
-                i = i + 1
                 if p.get("name") == base_name:
                     playlist = p
                     break
