@@ -22,7 +22,7 @@ CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 
 # What permissions we request from the user
-SCOPE = "user-read-private playlist-modify-public playlist-modify-private"
+SCOPE = "user-read-private playlist-modify-public playlist-modify-private playlist-read-private"
 
 def get_auth_url():
     params = {
