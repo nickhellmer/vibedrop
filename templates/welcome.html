@@ -51,8 +51,8 @@
 <div class="welcome-container">
   <div class="welcome-section">
     <h1>Welcome to VibeDrop 🎶</h1>
-    <p>I built VibeDrop because I’m constantly finding new music and wanted an easy way to share the best tracks with my friends. Instead of messaging song links or juggling playlists, I wanted to create a platform that turns music sharing into a recurring ritual.</p>
-    <p>That’s what VibeDrop is: a space where music discovery feels like an event, and everyone gets their turn to shine.</p>
+    <p>I built VibeDrop because I’m constantly finding new music and wanted an easy way to share my favorite newly discovered tracks with my friends. Instead of messaging song links or juggling playlists, I wanted to create a platform that turns music sharing into a recurring ritual.</p>
+    <p>That’s what VibeDrop is: a space where music sharing feels like an event.</p>
   </div>
 
   <!-- <div class="welcome-section">
@@ -62,12 +62,11 @@
 
   <div class="welcome-section">
     <h2>What’s Next?</h2>
-    <p>Head to your dashboard to explore Sound Circles you’ve joined or create a new one with friends. Each cycle ends with a Drop — where everyone’s submissions come together in one playlist for all to enjoy.</p>
+    <p>Check out the How it Works page. Each cycle ends with a Drop — where everyone’s submissions come together in one playlist for all to enjoy.</p>
+      <a class="welcome-button" href="{{ url_for('how_it_works') }}">How it works →</a>
+    <p>Already a pro? Head straight to your dashboard to explore Sound Circles or create a new one with friends.</p>
+      <a class= "btn link" href="{{ url_for('dashboard') }}">🎧 Go to Your Dashboard</a>
   </div>
 
-  <div class="welcome-section">
-    <a class="welcome-button" href="{{ url_for('dashboard') }}">🎧 Go to Your Dashboard</a>
-    <a class="btn link" href="{{ url_for('how_it_works') }}">How it works →</a>
-  </div>
 </div>
 {% endblock %}
